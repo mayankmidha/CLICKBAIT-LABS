@@ -153,7 +153,9 @@ export default function WriterPage() {
                   
                   <div className="space-y-4 max-h-[400px] overflow-y-auto pr-4 custom-scrollbar">
                     {logs.length === 0 ? (
-                      <div className="text-[10px] font-mono text-zinc-700 italic">> Awaiting deployment command...</div>
+                      <div className="text-[10px] font-mono text-zinc-700 italic">
+                        {">"} Awaiting deployment command...
+                      </div>
                     ) : (
                       logs.map((log, i) => (
                         <motion.div 
@@ -162,7 +164,7 @@ export default function WriterPage() {
                           key={i} 
                           className="text-[10px] font-mono text-emerald-500/80 leading-relaxed"
                         >
-                          {`> ${log}`}
+                          {">"} {log}
                         </motion.div>
                       ))
                     )}

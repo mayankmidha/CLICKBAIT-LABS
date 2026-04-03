@@ -8,8 +8,8 @@ import {
   Plus, 
   Search, 
   Globe, 
-  Instagram, 
-  Youtube, 
+  Camera, 
+  Video, 
   ShieldCheck,
   CheckCircle2,
   MoreVertical,
@@ -109,11 +109,11 @@ export default function MatrixPage() {
 
                     <div className="pt-6 border-t border-white/5 flex items-center gap-6">
                       <div className="flex items-center gap-2 text-zinc-500">
-                        <Youtube size={16} />
+                        <Video size={16} />
                         <span className="text-[10px] font-bold">{persona.youtube_id || 'N/A'}</span>
                       </div>
                       <div className="flex items-center gap-2 text-zinc-500">
-                        <Instagram size={16} />
+                        <Camera size={16} />
                         <span className="text-[10px] font-bold">{persona.insta_id || 'N/A'}</span>
                       </div>
                     </div>
