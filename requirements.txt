@@ -1,0 +1,1 @@
+fastapi\nuvicorn\npydantic\npython-multipart\npython-dotenv\ngoogle-genai\nddgs\npsycopg2-binary
