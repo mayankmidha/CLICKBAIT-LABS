@@ -122,18 +122,29 @@ async def delete_persona(id: int):
 
 @app.get("/api/empire-builder")
 async def empire_builder():
-    """Initializes the base factory roster."""
+    """Initializes the base factory roster with hard-coded Valkyrie."""
     personas = [
         {"name": "Aura", "niche": "AI & Tech", "seed": 555555, "dna": "26yo Japanese-Brazilian woman, sharp jawline, techwear"},
         {"name": "Kira", "niche": "Finance", "seed": 7721094, "dna": "24yo Indo-Australian woman, sun-kissed, professional linen"},
-        {"name": "Elara", "niche": "Luxury", "seed": 338812, "dna": "28yo Indo-French woman, chic bob, silk blouse"}
+        {"name": "Elara", "niche": "Luxury", "seed": 338812, "dna": "28yo Indo-French woman, chic bob, silk blouse"},
+        {
+            "name": "Valkyrie", 
+            "niche": "Gaming", 
+            "seed": 9922881, 
+            "dna": "21yo Indo-Japanese pro-gamer, sharp jawline, purple LED reflections, raven-black hair with neon-purple streaks, messy high bun, matte-black esports jersey, white noise-canceling headphones, neon-lit gaming room background"
+        }
     ]
-    conn = get_db_connection()
-    cur = conn.cursor()
-    for p in personas:
-        cur.execute("INSERT INTO personas (name, niche, prompt, seed) VALUES (%s,%s,%s,%s) ON CONFLICT (name) DO NOTHING",
-                  (p['name'], p['niche'], p['dna'], p['seed']))
-    conn.commit()
-    cur.close()
-    conn.close()
-    return {"status": "SUCCESS"}
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        for p in personas:
+            cur.execute("""INSERT INTO personas (name, niche, prompt, seed) 
+                         VALUES (%s,%s,%s,%s) ON CONFLICT (name) DO UPDATE 
+                         SET niche=EXCLUDED.niche, prompt=EXCLUDED.prompt, seed=EXCLUDED.seed""",
+                      (p['name'], p['niche'], p['dna'], p['seed']))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return {"status": "SUCCESS"}
+    except Exception as e:
+        return {"status": "ERROR", "error": str(e)}
