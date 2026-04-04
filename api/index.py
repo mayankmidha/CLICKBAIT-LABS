@@ -84,7 +84,7 @@ async def health():
 async def get_personas():
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT * FROM personas ORDER BY id ASC")
+    cur.execute("SELECT * FROM personas ORDER BY id DESC")
     rows = cur.fetchall()
     cur.close()
     conn.close()
