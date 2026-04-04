@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   const scriptHint = script ? ` ${script.substring(0, 80)}` : ''
   const videoPrompt = basePrompt + scriptHint
 
-  const res = await fetch('https://api.replicate.com/v1/models/minimax/video-01/predictions', {
+  const res = await fetch('https://api.replicate.com/v1/models/kling-ai/kling-v1-5-pro/predictions', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -30,7 +30,9 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify({
       input: {
         prompt: videoPrompt,
-        prompt_optimizer: true,
+        aspect_ratio: "9:16",
+        duration: 5,
+        mode: "pro"
       },
     }),
   })

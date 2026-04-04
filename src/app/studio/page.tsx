@@ -189,15 +189,14 @@ export default function StudioPage() {
 
                 {/* Video note */}
                 {mode === 'video' && (
-                  <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4 space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-500">Video Generation</p>
+                  <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4 space-y-1 shadow-lg">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-400">Elite Video Generation</p>
                     <p className="text-xs text-zinc-400 leading-relaxed">
-                      Powered by <strong className="text-white">MiniMax Video-01</strong> via Replicate.
-                      Generates 6-second HD video clips. Takes 1–3 minutes.
+                      Powered by <strong className="text-white">Kling 1.5 Pro</strong> via Replicate.
+                      Generates 5-second cinematic HD clips. Best-in-class human realism.
                     </p>
                     <p className="text-[10px] text-zinc-600 mt-2">
-                      Requires <code className="text-zinc-400">REPLICATE_API_TOKEN</code> in Vercel environment variables.
-                      Get one free at <strong className="text-white">replicate.com</strong>.
+                      Optimized for <strong className="text-white text-[8px] uppercase tracking-tighter">Human Physics & Weight</strong>.
                     </p>
                   </div>
                 )}
