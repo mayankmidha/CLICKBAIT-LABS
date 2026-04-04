@@ -9,11 +9,11 @@ import {
 } from 'lucide-react'
 
 const PERSONAS = [
-  { name: 'Aura',  niche: 'AI & Tech', seed: 555555  },
-  { name: 'Kira',  niche: 'Finance',   seed: 7721094 },
-  { name: 'Elara', niche: 'Luxury',    seed: 338812  },
-  { name: 'Maya',  niche: 'Fitness',   seed: 992211  },
-  { name: 'Luna',  niche: 'Gaming',    seed: 445566  },
+  { name: 'Aura',  niche: 'AI & Tech', seed: 555555,  prompt: '26yo Japanese-Brazilian woman, sharp jawline, hazel eyes, techwear, lab background' },
+  { name: 'Kira',  niche: 'Finance',   seed: 7721094, prompt: '24yo Indo-Australian woman, sun-kissed skin, light brown eyes, professional linen vest, Sydney office' },
+  { name: 'Elara', niche: 'Luxury',    seed: 338812,  prompt: '28yo Indo-French woman, chic bob, high cheekbones, silk blouse, Paris studio' },
+  { name: 'Maya',  niche: 'Fitness',   seed: 992211,  prompt: '25yo Scandinavian-Indian woman, athletic build, messy bun, gym sunlight' },
+  { name: 'Luna',  niche: 'Gaming',    seed: 445566,  prompt: '22yo American-Indian woman, purple hair streaks, headset, neon gaming room' },
 ]
 
 type RenderMode = 'portrait' | 'video'
