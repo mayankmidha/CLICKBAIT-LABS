@@ -11,6 +11,7 @@ from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 import requests
 import datetime
+import time
 
 load_dotenv()
 
@@ -50,7 +51,14 @@ def init_db():
                       url TEXT, 
                       type TEXT, 
                       status TEXT DEFAULT 'READY',
+                      replicate_id TEXT,
                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+        
+        # Self-healing for missing column
+        try:
+            cur.execute("ALTER TABLE renders ADD COLUMN IF NOT EXISTS replicate_id TEXT")
+        except: pass
+        
         conn.commit()
         cur.close()
         conn.close()
@@ -77,16 +85,11 @@ class ProjectCreate(BaseModel):
 class ActionRequest(BaseModel):
     project_id: int
 
-class ImageGenRequest(BaseModel):
-    persona_name: str
-    prompt_override: Optional[str] = None
-    seed: Optional[int] = 555555
-
 # --- API Endpoints ---
 
 @app.get("/api/health")
 async def health():
-    return {"status": "Clickbait Labs OS v3.5 - Pipeline Restored"}
+    return {"status": "Clickbait Labs OS v5.0 - UNCOMFORTABLE REALISM ACTIVE"}
 
 @app.get("/api/personas")
 async def get_personas():
@@ -140,22 +143,6 @@ async def create_project(data: ProjectCreate):
     conn.close()
     return {"id": project_id}
 
-# --- Library Management ---
-@app.get("/api/library")
-async def get_global_library():
-    """Returns all assets in the system grouped by persona."""
-    conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute("""SELECT r.*, p.title as project_title, per.name as persona_name 
-                 FROM renders r 
-                 JOIN projects p ON r.project_id = p.id 
-                 JOIN personas per ON p.persona_id = per.id 
-                 ORDER BY r.created_at DESC""")
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
-    return rows
-
 @app.get("/api/projects/{id}")
 async def get_project(id: int):
     conn = get_db_connection()
@@ -164,11 +151,28 @@ async def get_project(id: int):
     project = cur.fetchone()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-
-    # Get all assets for this specific project
+    
     cur.execute("SELECT * FROM renders WHERE project_id = %s ORDER BY created_at DESC", (id,))
     renders = cur.fetchall()
-
+    
+    # Check for processing videos
+    for r in renders:
+        if r['status'] == 'PROCESSING' and r['replicate_id']:
+            token = os.getenv("REPLICATE_API_TOKEN")
+            if token:
+                rep_res = requests.get(f"https://api.replicate.com/v1/predictions/{r['replicate_id']}", 
+                                     headers={"Authorization": f"Token {token}"})
+                if rep_res.status_code == 200:
+                    data = rep_res.json()
+                    if data['status'] == 'succeeded':
+                        cur.execute("UPDATE renders SET url = %s, status = 'READY' WHERE id = %s", (data['output'], r['id']))
+                        r['url'] = data['output']
+                        r['status'] = 'READY'
+                    elif data['status'] == 'failed':
+                        cur.execute("UPDATE renders SET status = 'FAILED' WHERE id = %s", (r['id'],))
+                        r['status'] = 'FAILED'
+    
+    conn.commit()
     cur.close()
     conn.close()
     return {**project, "renders": renders}
@@ -183,9 +187,9 @@ async def run_research(req: ActionRequest):
     content = ""
     try:
         with DDGS() as ddgs:
-            res1 = ddgs.text(f"viral trends {topic}", max_results=3)
-            for r in res1: content += f"\n- {r['body']}"
-    except: content = "Research mode active."
+            res = ddgs.text(f"viral trends {topic}", max_results=5)
+            for r in res: content += f"\n- {r['body']}"
+    except: content = "Intelligence link active."
     cur.execute("UPDATE projects SET research_content = %s, status = 'RESEARCHED' WHERE id = %s", (content, id))
     conn.commit()
     cur.close()
@@ -201,7 +205,12 @@ async def run_scriptwriter(req: ActionRequest):
     cur.execute("""SELECT p.topic, p.research_content, per.name, per.prompt 
                  FROM projects p JOIN personas per ON p.persona_id = per.id WHERE p.id = %s""", (id,))
     data = cur.fetchone()
-    prompt = f"Write viral script for {data[2]} on {data[0]}. Research: {data[1]}. Max 180 words."
+    prompt = (
+        "ACT AS A $100M VIRAL CREATOR. WRITE A SCRIPT IN THE VOICE OF THIS PERSONA:\n"
+        f"NAME: {data[2]}. DNA: {data[3]}.\n"
+        f"TOPIC: {data[0]}. RESEARCH: {data[1]}.\n"
+        "GOAL: High-retention, authentic, non-AI sounding. Max 180 words. OUTPUT ONLY SCRIPT."
+    )
     try:
         client = genai.Client(api_key=api_key)
         script = client.models.generate_content(model="gemini-1.5-pro", contents=prompt).text
@@ -221,12 +230,16 @@ async def run_visualizer(req: ActionRequest):
     cur.execute("""SELECT per.prompt, per.seed, p.script 
                  FROM projects p JOIN personas per ON p.persona_id = per.id WHERE p.id = %s""", (id,))
     data = cur.fetchone()
-    prefix = "Hyper-realistic raw photo, 8k UHD, shot on 35mm lens, f/1.8, "
-    suffix = ", visible skin pores, natural skin texture, cinematic lighting, sharp focus."
+    
+    # UNCOMFORTABLE REALISM SHELL
+    prefix = "A raw, unfiltered authentic film photograph, shot on 35mm f/1.8 lens, natural uneven skin textures, visible pores, candid high-fidelity portrait, soft natural lighting, real life person, no digital smoothness, authentic human presence, "
+    suffix = ", extremely sharp focus on eyes, ultra-realistic skin micro-details, grainy texture, shot on Kodak Portra 400."
+    
     prompt = f"{prefix}{data[0]}, {data[2][:100]}{suffix}"
     encoded = requests.utils.quote(prompt)
     url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1792&model=flux&seed={data[1]}&nologo=true"
-    cur.execute("INSERT INTO renders (project_id, url, type) VALUES (%s, %s, 'image')", (id, url))
+    
+    cur.execute("INSERT INTO renders (project_id, url, type, status) VALUES (%s, %s, 'image', 'READY')", (id, url))
     cur.execute("UPDATE projects SET status = 'VISUALIZED' WHERE id = %s", (id,))
     conn.commit()
     cur.close()
@@ -235,35 +248,50 @@ async def run_visualizer(req: ActionRequest):
 
 @app.post("/api/render-video")
 async def run_animator(req: ActionRequest):
-    """Triggers the high-fidelity Kling 1.5 Pro video engine via Replicate."""
     id = req.project_id
     token = os.getenv("REPLICATE_API_TOKEN")
-    if not token:
-        raise HTTPException(status_code=401, detail="REPLICATE_API_TOKEN missing")
-
+    if not token: raise HTTPException(status_code=401, detail="REPLICATE_API_TOKEN missing")
+    
     conn = get_db_connection()
     cur = conn.cursor()
-    # Get the latest image render for this project
-    cur.execute("SELECT url FROM renders WHERE project_id = %s AND type = 'image' ORDER BY id DESC LIMIT 1", (id,))
-    image_data = cur.fetchone()
-    if not image_data:
-        raise HTTPException(status_code=400, detail="No portrait found. Render an image first.")
+    cur.execute("""SELECT per.name, per.prompt, p.script, (SELECT url FROM renders WHERE project_id = %s AND type='image' ORDER BY id DESC LIMIT 1)
+                 FROM projects p JOIN personas per ON p.persona_id = per.id WHERE p.id = %s""", (id, id))
+    data = cur.fetchone()
+    
+    if not data[3]: raise HTTPException(status_code=400, detail="Render a portrait first.")
 
-    # Trigger Replicate (Kling 1.5 Pro)
-    # This is a simplified placeholder for the background task
-    cur.execute("INSERT INTO renders (project_id, url, type, status) VALUES (%s, %s, 'video', 'PROCESSING')", (id, image_data[0]))
-    cur.execute("UPDATE projects SET status = 'RENDERED' WHERE id = %s", (id,))
+    # Call Replicate Kling 1.5 Pro
+    video_prompt = f"A professional woman {data[0]} speaking to camera, {data[1][:100]}, high fidelity, natural movement."
+    rep_res = requests.post(
+        "https://api.replicate.com/v1/models/kling-ai/kling-v1-5-pro/predictions",
+        headers={"Authorization": f"Token {token}", "Content-Type": "application/json"},
+        json={
+            "input": {
+                "prompt": video_prompt,
+                "start_image": data[3],
+                "aspect_ratio": "9:16",
+                "duration": 5
+            }
+        }
+    )
+    
+    if rep_res.status_code != 201:
+        raise HTTPException(status_code=rep_res.status_code, detail=rep_res.text)
+    
+    prediction = rep_res.json()
+    cur.execute("INSERT INTO renders (project_id, url, type, status, replicate_id) VALUES (%s, %s, 'video', 'PROCESSING', %s)", 
+              (id, data[3], prediction['id']))
     conn.commit()
     cur.close()
     conn.close()
-    return {"status": "ANIMATION_QUEUED"}
+    return {"status": "PROCESSING", "id": prediction['id']}
 
 @app.get("/api/factory-reset")
 async def factory_reset():
     personas = [
-        {"name": "Aura", "niche": "AI & Tech", "seed": 555555, "dna": "26yo Japanese-Brazilian woman, sharp jawline, techwear"},
-        {"name": "Kira", "niche": "Finance", "seed": 7721094, "dna": "24yo Indo-Australian woman, sun-kissed, professional linen"},
-        {"name": "Valkyrie", "niche": "Gaming", "seed": 9922881, "dna": "21yo Indo-Japanese pro-gamer, sharp jawline, purple LED reflections, messy bun, esports jersey, neon room background"}
+        {"name": "Aura", "niche": "AI & Tech", "seed": 555555, "dna": "26yo Japanese-Brazilian woman, sharp jawline, messy hair, tech turtleneck"},
+        {"name": "Kira", "niche": "Finance", "seed": 7721094, "dna": "24yo Indo-Australian woman, sun-kissed tanned skin, natural linen, coastal office"},
+        {"name": "Valkyrie", "niche": "Gaming", "seed": 9922881, "dna": "21yo Indo-Japanese gamer, messy high bun, purple streaks, esports jersey, gaming room"}
     ]
     conn = get_db_connection()
     cur = conn.cursor()
@@ -275,3 +303,17 @@ async def factory_reset():
     cur.close()
     conn.close()
     return {"status": "SUCCESS"}
+
+@app.get("/api/library")
+async def get_global_library():
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("""SELECT r.*, p.title as project_title, per.name as persona_name 
+                 FROM renders r 
+                 JOIN projects p ON r.project_id = p.id 
+                 JOIN personas per ON p.persona_id = per.id 
+                 ORDER BY r.created_at DESC""")
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows

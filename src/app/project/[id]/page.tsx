@@ -29,7 +29,11 @@ const fetcher = (url: string) => fetch(url).then(res => res.json())
 export default function ProjectWorkspace() {
   const { id } = useParams()
   const router = useRouter()
-  const { data: project, isLoading } = useSWR(`/api/projects/${id}`, fetcher)
+  
+  // SWR with auto-refresh every 5 seconds to track render progress
+  const { data: project, isLoading } = useSWR(`/api/projects/${id}`, fetcher, {
+    refreshInterval: 5000 
+  })
   
   const [activeTab, setActiveTab] = useState('intelligence')
   const [isProcessing, setIsProcessing] = useState(false)
@@ -74,7 +78,7 @@ export default function ProjectWorkspace() {
   async function runRender() {
     setIsProcessing(true)
     try {
-      await fetch(`/api/render-image`, { 
+      const res = await fetch(`/api/render-image`, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ project_id: parseInt(id as string) })
@@ -90,7 +94,7 @@ export default function ProjectWorkspace() {
   async function runVideoRender() {
     setIsProcessing(true)
     try {
-      await fetch(`/api/render-video`, { 
+      const res = await fetch(`/api/render-video`, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ project_id: parseInt(id as string) })
@@ -146,7 +150,7 @@ export default function ProjectWorkspace() {
                  { id: 'intelligence', name: 'Intelligence', icon: Zap, status: project.research_content ? 'Complete' : 'Pending' },
                  { id: 'script', name: 'Master Script', icon: Brain, status: project.script ? 'Complete' : 'Pending' },
                  { id: 'vision', name: 'Identity Vision', icon: Eye, status: project.renders?.some((r:any) => r.type === 'image') ? 'Complete' : 'Pending' },
-                 { id: 'motion', name: 'Motion Render', icon: Video, status: project.renders?.some((r:any) => r.type === 'video') ? 'Complete' : 'Pending' },
+                 { id: 'motion', name: 'Motion Render', icon: Video, status: project.renders?.some((r:any) => r.type === 'video' && r.status === 'READY') ? 'Complete' : project.renders?.some((r:any) => r.type === 'video') ? 'Processing' : 'Pending' },
                ].map((step) => (
                  <button 
                   key={step.id}
@@ -157,7 +161,7 @@ export default function ProjectWorkspace() {
                        <step.icon size={18} />
                        <span className="text-xs font-bold uppercase tracking-widest">{step.name}</span>
                     </div>
-                    <span className={`text-[8px] font-black uppercase ${step.status === 'Complete' ? 'text-emerald-500' : 'text-zinc-800'}`}>
+                    <span className={`text-[8px] font-black uppercase ${step.status === 'Complete' ? 'text-emerald-500' : step.status === 'Processing' ? 'text-blue-500 animate-pulse' : 'text-zinc-800'}`}>
                        {step.status}
                     </span>
                  </button>
@@ -276,7 +280,7 @@ export default function ProjectWorkspace() {
                                   className="px-6 py-3 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-400 transition-all flex items-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-20"
                                 >
                                    {isProcessing ? <Loader2 className="animate-spin" size={14} /> : <Eye size={14} />}
-                                   Render Identity
+                                   Render Portrait
                                 </button>
                              </div>
                              
@@ -285,7 +289,7 @@ export default function ProjectWorkspace() {
                                   <div key={render.id} className="aspect-[9/16] rounded-2xl bg-black overflow-hidden border border-white/5 group relative">
                                      <img src={render.url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                                        <button className="p-3 bg-white text-black rounded-full hover:scale-110 transition-all shadow-2xl"><Download size={18} /></button>
+                                        <a href={render.url} download className="p-3 bg-white text-black rounded-full hover:scale-110 transition-all shadow-2xl"><Download size={18} /></a>
                                      </div>
                                   </div>
                                 ))}
@@ -317,7 +321,7 @@ export default function ProjectWorkspace() {
                              </div>
                              <div className="flex items-center gap-3 px-4 py-3 bg-white/5 rounded-xl border border-white/10">
                                 <CheckCircle2 size={14} className="text-emerald-500" />
-                                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Ultra-Definition Active</span>
+                                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Ultra-Realism Active</span>
                              </div>
                           </div>
                        </div>
@@ -336,7 +340,7 @@ export default function ProjectWorkspace() {
                           <div className="flex justify-between items-center text-white">
                              <div className="space-y-1">
                                 <h3 className="text-2xl font-bold tracking-tight">Vocal & Motion Synthesis</h3>
-                                <p className="text-zinc-500 text-xs font-medium italic">Powered by Kling 1.5 Pro High-Fidelity Engine</p>
+                                <p className="text-zinc-500 text-xs font-medium italic">Kling 1.5 Pro High-Fidelity Engine</p>
                              </div>
                              <button 
                               onClick={runVideoRender}
@@ -350,21 +354,32 @@ export default function ProjectWorkspace() {
 
                           <div className="grid md:grid-cols-2 gap-8">
                              {project.renders?.filter((r:any) => r.type === 'video').map((render: any) => (
-                               <div key={render.id} className="aspect-[9/16] rounded-3xl bg-black border border-white/5 flex items-center justify-center relative overflow-hidden group">
+                               <div key={render.id} className="aspect-[9/16] rounded-3xl bg-black border border-white/5 flex items-center justify-center relative overflow-hidden group shadow-2xl">
                                   {render.status === 'PROCESSING' ? (
                                     <div className="text-center space-y-4">
                                        <Loader2 className="animate-spin mx-auto text-emerald-500" size={32} />
                                        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Animating Identity...</p>
+                                       <p className="text-[8px] text-zinc-800">Est. 1-3 minutes</p>
+                                    </div>
+                                  ) : render.status === 'FAILED' ? (
+                                    <div className="text-center space-y-2 text-red-500">
+                                       <AlertCircle size={32} className="mx-auto" />
+                                       <p className="text-[10px] font-black uppercase tracking-widest">Render Failed</p>
                                     </div>
                                   ) : (
-                                    <video src={render.url} controls className="w-full h-full object-cover" />
+                                    <>
+                                      <video src={render.url} controls className="w-full h-full object-cover" />
+                                      <a href={render.url} download className="absolute top-6 right-6 p-3 bg-white text-black rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-2xl">
+                                         <Download size={18} />
+                                      </a>
+                                    </>
                                   )}
                                </div>
                              ))}
                              {!project.renders?.some((r:any) => r.type === 'video') && (
-                               <div className="col-span-2 py-32 border border-dashed border-white/5 rounded-3xl flex flex-col items-center gap-4 text-zinc-700">
+                               <div className="col-span-2 py-32 border border-dashed border-white/5 rounded-2xl flex flex-col items-center gap-4 text-zinc-700">
                                   <Video size={48} strokeWidth={1} />
-                                  <p className="text-xs font-bold uppercase tracking-widest">Render a 4K portrait first to unlock animation.</p>
+                                  <p className="text-xs font-bold uppercase tracking-widest">Render a Portrait first to unlock Motion.</p>
                                </div>
                              )}
                           </div>
