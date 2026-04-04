@@ -140,6 +140,22 @@ async def create_project(data: ProjectCreate):
     conn.close()
     return {"id": project_id}
 
+# --- Library Management ---
+@app.get("/api/library")
+async def get_global_library():
+    """Returns all assets in the system grouped by persona."""
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("""SELECT r.*, p.title as project_title, per.name as persona_name 
+                 FROM renders r 
+                 JOIN projects p ON r.project_id = p.id 
+                 JOIN personas per ON p.persona_id = per.id 
+                 ORDER BY r.created_at DESC""")
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
+
 @app.get("/api/projects/{id}")
 async def get_project(id: int):
     conn = get_db_connection()
@@ -148,8 +164,11 @@ async def get_project(id: int):
     project = cur.fetchone()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    cur.execute("SELECT * FROM renders WHERE project_id = %s", (id,))
+
+    # Get all assets for this specific project
+    cur.execute("SELECT * FROM renders WHERE project_id = %s ORDER BY created_at DESC", (id,))
     renders = cur.fetchall()
+
     cur.close()
     conn.close()
     return {**project, "renders": renders}

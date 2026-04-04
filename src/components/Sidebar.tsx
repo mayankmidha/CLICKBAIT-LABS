@@ -21,6 +21,7 @@ function cn(...inputs: ClassValue[]) {
 const navItems = [
   { name: 'Factory Floor', href: '/', icon: LayoutDashboard },
   { name: 'Talent Agency', href: '/matrix', icon: Users },
+  { name: 'Asset Library', href: '/library', icon: FolderKanban },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
 ]
 
