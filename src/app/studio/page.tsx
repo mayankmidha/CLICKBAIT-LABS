@@ -34,13 +34,19 @@ export default function StudioPage() {
   async function handleRender() {
     if (!selectedPersona) return
     setIsRendering(true)
+    
+    // Find selected persona seed
+    const pData = personas?.find((p: any) => p.name === selectedPersona)
+    const seed = pData?.seed || null
+
     try {
       const res = await fetch('/api/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           prompt: `High fidelity professional portrait of ${selectedPersona}, cinematic studio lighting, 8k resolution, realistic skin textures`, 
-          persona_name: selectedPersona 
+          persona_name: selectedPersona,
+          seed: seed
         })
       })
       const data = await res.json()

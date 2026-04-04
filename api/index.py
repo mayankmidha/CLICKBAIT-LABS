@@ -30,7 +30,13 @@ def init_cloud_db():
                   niche TEXT, 
                   prompt TEXT,
                   youtube_id TEXT,
-                  insta_id TEXT)''')
+                  insta_id TEXT,
+                  seed INTEGER)''')
+    # Force add seed if table exists without it
+    try:
+        cur.execute("ALTER TABLE personas ADD COLUMN IF NOT EXISTS seed INTEGER")
+    except:
+        pass
     cur.execute('''CREATE TABLE IF NOT EXISTS content_calendar
                  (id SERIAL PRIMARY KEY, 
                   persona_id INTEGER REFERENCES personas(id), 
@@ -57,6 +63,7 @@ class ScriptRequest(BaseModel):
 class ImageRequest(BaseModel):
     prompt: str
     persona_name: str
+    seed: Optional[int] = None
 
 # --- API Endpoints ---
 
@@ -101,10 +108,10 @@ async def generate_script(req: ScriptRequest):
 
 @app.post("/api/generate-image")
 async def generate_image(req: ImageRequest):
-    """Generates a high-fidelity image using free cloud providers."""
-    # We use Pollinations.ai for unauthenticated, fast, free Flux-style images
+    """Generates a high-fidelity image with seed-based consistency."""
     encoded_prompt = requests.utils.quote(req.prompt)
-    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1792&model=flux&nologo=true"
+    seed_param = f"&seed={req.seed}" if req.seed else ""
+    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1792&model=flux{seed_param}&nologo=true"
     return {"url": image_url}
 
 @app.get("/api/personas")
@@ -124,8 +131,8 @@ async def list_personas():
 async def create_persona(p: dict):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("INSERT INTO personas (name, niche, prompt, youtube_id, insta_id) VALUES (%s,%s,%s,%s,%s)", 
-              (p['name'], p['niche'], p['prompt'], p.get('youtube_id'), p['insta_id']))
+    cur.execute("INSERT INTO personas (name, niche, prompt, youtube_id, insta_id, seed) VALUES (%s,%s,%s,%s,%s,%s)", 
+              (p['name'], p['niche'], p['prompt'], p.get('youtube_id'), p.get('insta_id'), p.get('seed')))
     conn.commit()
     cur.close()
     conn.close()

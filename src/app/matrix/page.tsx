@@ -29,12 +29,13 @@ export default function MatrixPage() {
   const [yt, setYt] = useState('')
   const [ig, setIg] = useState('')
   const [prompt, setPrompt] = useState('')
+  const [seed, setSeed] = useState('')
 
   async function handleAdd() {
     await fetch('/api/personas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, niche, prompt, youtube_id: yt, insta_id: ig })
+      body: JSON.stringify({ name, niche, prompt, youtube_id: yt, insta_id: ig, seed: parseInt(seed) || null })
     })
     mutate('/api/personas')
     setShowAddModal(false)
@@ -164,7 +165,7 @@ export default function MatrixPage() {
                   </select>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
+                <div className="grid md:grid-cols-3 gap-6">
                   <input 
                     placeholder="YouTube Handle"
                     value={yt}
@@ -175,6 +176,13 @@ export default function MatrixPage() {
                     placeholder="Instagram Handle"
                     value={ig}
                     onChange={e => setIg(e.target.value)}
+                    className="w-full bg-black/50 border border-white/5 rounded-xl p-4 text-sm font-medium focus:border-white/20 transition-all"
+                  />
+                  <input 
+                    placeholder="Lock Seed"
+                    type="number"
+                    value={seed}
+                    onChange={e => setSeed(e.target.value)}
                     className="w-full bg-black/50 border border-white/5 rounded-xl p-4 text-sm font-medium focus:border-white/20 transition-all"
                   />
                 </div>
