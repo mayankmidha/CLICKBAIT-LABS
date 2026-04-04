@@ -43,8 +43,16 @@ def init_cloud_db():
         if not cur.fetchone():
             print("Fixing Database: Adding 'seed' column...")
             cur.execute("ALTER TABLE personas ADD COLUMN seed BIGINT DEFAULT 555555")
-        
-        # 3. Create calendar
+
+        # 3. Self-Healing: Add unique constraint on name to prevent duplicates
+        cur.execute("""
+            DO $$ BEGIN
+                ALTER TABLE personas ADD CONSTRAINT personas_name_unique UNIQUE (name);
+            EXCEPTION WHEN duplicate_table THEN NULL;
+            END $$;
+        """)
+
+        # 4. Create calendar
         cur.execute('''CREATE TABLE IF NOT EXISTS content_calendar
                      (id SERIAL PRIMARY KEY, 
                       persona_id INTEGER REFERENCES personas(id), 
@@ -73,13 +81,25 @@ async def empire_builder():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+
+        # Remove any duplicates first (keep only the lowest id per name)
+        cur.execute("""
+            DELETE FROM personas
+            WHERE id NOT IN (
+                SELECT MIN(id) FROM personas GROUP BY name
+            )
+        """)
+
         for p in personas_to_create:
-            try:
-                cur.execute("INSERT INTO personas (name, niche, prompt, seed) VALUES (%s,%s,%s,%s) ON CONFLICT DO NOTHING", 
-                          (p['name'], p['niche'], p['dna'], p['seed']))
-            except Exception as e:
-                print(f"Error inserting {p['name']}: {e}")
-                continue
+            cur.execute("""
+                INSERT INTO personas (name, niche, prompt, seed)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (name) DO UPDATE SET
+                    niche = EXCLUDED.niche,
+                    prompt = EXCLUDED.prompt,
+                    seed = EXCLUDED.seed
+            """, (p['name'], p['niche'], p['dna'], p['seed']))
+
         conn.commit()
         cur.close()
         conn.close()
@@ -140,15 +160,35 @@ async def research(request: Request):
 
 @app.post("/api/generate-script")
 async def generate_script(req: ScriptRequest):
+    prompt = (
+        f"You are a legendary viral video scriptwriter. Write a punchy short-form video script. "
+        f"TOPIC: {req.topic}. NICHE: {req.niche}. STYLE: {req.style}. "
+        f"Structure: HOOK (1 line that stops the scroll), BUILD (2-3 lines of tension), "
+        f"VALUE (the insight or reveal), PATTERN INTERRUPT (unexpected twist), CTA (call to action). "
+        f"Max 150 words. Output only the script, no labels."
+    )
+
+    # 1. Try Gemini if key available and not exhausted
     api_key = req.api_key or os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise HTTPException(status_code=400, detail="Gemini API Key missing")
-    
+    if api_key:
+        try:
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+            if response.text:
+                return {"script": response.text}
+        except Exception:
+            pass  # Fall through to free fallback
+
+    # 2. Fallback: Pollinations AI (free, no key required)
     try:
-        client = genai.Client(api_key=api_key)
-        prompt = f"ACT AS LEGENDARY WRITER. TOPIC: {req.topic}, NICHE: {req.niche}, STYLE: {req.style}. Format: HOOK, BUILD, VALUE, PATTERN INTERRUPT, CTA."
-        response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
-        return {"script": response.text}
+        encoded_prompt = requests.utils.quote(prompt)
+        resp = requests.get(
+            f"https://text.pollinations.ai/{encoded_prompt}?model=openai&seed=42",
+            timeout=30
+        )
+        if resp.status_code == 200 and resp.text:
+            return {"script": resp.text}
+        return {"script": None, "error": f"Pollinations returned {resp.status_code}"}
     except Exception as e:
         return {"script": None, "error": str(e)}
 
@@ -245,19 +285,31 @@ async def generate_thumbnail(req: Request):
     data = await req.json()
     script = data.get("script", "")
     persona = data.get("persona", "")
+
+    thumb_prompt_request = (
+        f"Create a YouTube thumbnail image generation prompt for influencer '{persona}'. "
+        f"Script excerpt: '{script[:200]}'. "
+        f"Output ONLY the image prompt, max 80 words, no explanation."
+    )
+
+    # 1. Try Gemini
     api_key = data.get("api_key") or os.getenv("GEMINI_API_KEY")
+    if api_key:
+        try:
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(model="gemini-2.0-flash", contents=thumb_prompt_request)
+            if response.text:
+                return {"prompt": response.text.strip()}
+        except Exception:
+            pass
 
-    if not api_key:
-        prompt = f"YouTube thumbnail for {persona}, bold text overlay, cinematic lighting, high contrast, viral style"
-        return {"prompt": prompt}
-
+    # 2. Fallback: Pollinations text
     try:
-        client = genai.Client(api_key=api_key)
-        req_prompt = (
-            f"Generate a YouTube thumbnail image prompt for this script: '{script[:300]}'. "
-            f"Influencer name: {persona}. Output ONLY the image generation prompt, max 80 words, no explanation."
-        )
-        response = client.models.generate_content(model="gemini-2.0-flash", contents=req_prompt)
-        return {"prompt": response.text.strip()}
-    except Exception as e:
-        return {"prompt": f"Cinematic portrait of {persona}, YouTube thumbnail style, bold typography, high contrast, viral energy"}
+        encoded = requests.utils.quote(thumb_prompt_request)
+        resp = requests.get(f"https://text.pollinations.ai/{encoded}?model=openai&seed=99", timeout=20)
+        if resp.status_code == 200 and resp.text:
+            return {"prompt": resp.text.strip()}
+    except Exception:
+        pass
+
+    return {"prompt": f"Cinematic portrait of {persona}, YouTube thumbnail style, bold typography, high contrast, viral energy"}
