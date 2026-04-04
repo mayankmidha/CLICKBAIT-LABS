@@ -11,9 +11,23 @@ const fetcher = (url: string) => fetch(url).then(res => res.json())
 
 export default function OverviewPage() {
   const { data: status } = useSWR('/api/system/status', fetcher, { refreshInterval: 5000 })
+  const [autopilotData, setAutopilotData] = useState<any>(null)
+  const [isBuilding, setIsBuilding] = useState(false)
   
   const fluxPercent = status?.flux_download?.percent || 0
-  const fluxGB = status?.flux_download?.size || 0
+  
+  async function runAutopilot() {
+    setIsBuilding(true)
+    try {
+      const res = await fetch('/api/empire-builder')
+      const data = await res.json()
+      setAutopilotData(data)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setIsBuilding(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-black text-white flex">
@@ -46,8 +60,13 @@ export default function OverviewPage() {
                     <span className="text-xs font-mono font-bold">{fluxPercent}%</span>
                   </div>
                </div>
-               <button className="flex items-center gap-2 px-6 py-3 bg-white text-black rounded-xl text-xs font-black uppercase tracking-widest hover:bg-zinc-200 transition-all shadow-xl shadow-white/5">
-                  Deploy Strategist <Sparkles size={14} />
+               <button 
+                onClick={runAutopilot}
+                disabled={isBuilding}
+                className="flex items-center gap-2 px-6 py-3 bg-white text-black rounded-xl text-xs font-black uppercase tracking-widest hover:bg-zinc-200 transition-all shadow-xl shadow-white/5 disabled:opacity-50"
+               >
+                  {isBuilding ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
+                  Run Empire Autopilot
                </button>
             </div>
           </div>
@@ -57,6 +76,28 @@ export default function OverviewPage() {
           <div className="grid lg:grid-cols-3 gap-12">
             <div className="lg:col-span-2">
               <StudioCanvas />
+              
+              {autopilotData && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-12 bg-zinc-900/30 border border-white/10 rounded-3xl p-10 space-y-8"
+                >
+                  <h3 className="text-sm font-black uppercase tracking-widest text-blue-500">Autopilot Output: 5 Personas Generated</h3>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {autopilotData.entities.map((ent: any, i: number) => (
+                      <div key={i} className="bg-black/50 p-6 rounded-2xl border border-white/5 space-y-4">
+                        <h4 className="font-bold text-white flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500" /> {ent.name}
+                        </h4>
+                        <p className="text-[10px] text-zinc-500 leading-relaxed line-clamp-3 italic">
+                          {ent.script}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
             </div>
 
             <div className="space-y-8">

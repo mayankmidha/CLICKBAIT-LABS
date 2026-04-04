@@ -59,10 +59,46 @@ def init_cloud_db():
     except Exception as e:
         return f"DATABASE_ERROR: {str(e)}"
 
-@app.get("/api/db-sync")
-async def db_sync():
-    status = init_cloud_db()
-    return {"status": status}
+@app.get("/api/empire-builder")
+async def empire_builder():
+    """Automates the creation of a 5-persona empire with scripts."""
+    personas_to_create = [
+        {"name": "Aura", "niche": "AI & Tech", "seed": 555555, "dna": "Japanese-Brazilian tech minimalist, black turtleneck, lab background"},
+        {"name": "Kira", "niche": "Finance", "seed": 7721094, "dna": "Indo-Australian wealth strategist, Sydney coastal office, professional linen"},
+        {"name": "Elara", "niche": "Luxury", "seed": 338812, "dna": "Indo-French fashion visionary, Paris studio, silk and structured style"},
+        {"name": "Maya", "niche": "Fitness", "seed": 992211, "dna": "Scandinavian-Indian biohacker, minimalist gym, focused and athletic"},
+        {"name": "Luna", "niche": "Gaming", "seed": 445566, "dna": "American-Indian pro-gamer, neon cyberpunk setup, high-energy"}
+    ]
+    
+    results = []
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    api_key = os.getenv("GEMINI_API_KEY")
+    client = genai.Client(api_key=api_key) if api_key else None
+
+    for p in personas_to_create:
+        # 1. Create Persona
+        cur.execute("INSERT INTO personas (name, niche, prompt, seed) VALUES (%s,%s,%s,%s) ON CONFLICT DO NOTHING", 
+                  (p['name'], p['niche'], p['dna'], p['seed']))
+        
+        # 2. Generate Initial Script
+        script = "Awaiting Gemini Key..."
+        if client:
+            prompt = f"ACT AS LEGENDARY WRITER. PERSONA: {p['name']}, NICHE: {p['niche']}. Write a 60-second viral HOOK and VALUE script for their debut."
+            response = client.models.generate_content(model="gemini-1.5-pro", contents=prompt)
+            script = response.text
+        
+        # 3. Save to Calendar
+        cur.execute("INSERT INTO content_calendar (persona_id, topic, status) VALUES ((SELECT id FROM personas WHERE name=%s), %s, 'READY')", 
+                  (p['name'], f"Debut Video: {p['niche']}"))
+        
+        results.append({"name": p['name'], "script": script})
+    
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {"status": "EMPIRE_INITIALIZED", "entities": results}
 
 # Try to init on startup
 try:
