@@ -29,9 +29,27 @@ export default function StudioPage() {
   const [isThumbGenerating, setIsThumbGenerating] = useState(false)
   const [precision, setPrecision] = useState('FP8')
 
+  const [previewUrl, setPreviewUrl] = useState('')
+
   async function handleRender() {
+    if (!selectedPersona) return
     setIsRendering(true)
-    setTimeout(() => setIsRendering(false), 3000)
+    try {
+      const res = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          prompt: `High fidelity professional portrait of ${selectedPersona}, cinematic studio lighting, 8k resolution, realistic skin textures`, 
+          persona_name: selectedPersona 
+        })
+      })
+      const data = await res.json()
+      setPreviewUrl(data.url)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setIsRendering(false)
+    }
   }
 
   async function handleThumbnail() {
@@ -161,19 +179,30 @@ export default function StudioPage() {
             {/* Preview & Status */}
             <div className="space-y-8">
                <div className="bg-black border border-white/10 rounded-[2.5rem] aspect-[9/16] max-h-[700px] mx-auto flex flex-col items-center justify-center relative overflow-hidden shadow-2xl group">
-                  <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none z-10" />
                   
-                  <Clapperboard size={64} strokeWidth={0.5} className="text-zinc-800 mb-6 group-hover:scale-110 transition-transform duration-700" />
-                  <p className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-700">Production Standby</p>
+                  {previewUrl ? (
+                    <motion.img 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      src={previewUrl}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  ) : (
+                    <>
+                      <Clapperboard size={64} strokeWidth={0.5} className="text-zinc-800 mb-6 group-hover:scale-110 transition-transform duration-700" />
+                      <p className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-700">Production Standby</p>
+                    </>
+                  )}
                   
-                  <div className="absolute bottom-10 left-10 right-10 p-6 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-md">
+                  <div className="absolute bottom-10 left-10 right-10 p-6 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-md z-20">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-[8px] font-black uppercase tracking-widest text-zinc-500">Local GPU Cluster</span>
-                      <span className="text-[8px] font-bold text-emerald-500 uppercase">Optimized</span>
+                      <span className="text-[8px] font-black uppercase tracking-widest text-zinc-500">{isRendering ? "Rendering Engine" : "Cloud GPU Status"}</span>
+                      <span className="text-[8px] font-bold text-emerald-500 uppercase">{isRendering ? "Generating..." : "Optimized"}</span>
                     </div>
                     <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
                       <motion.div 
-                        animate={{ x: ['-100%', '100%'] }}
+                        animate={isRendering ? { x: ['-100%', '100%'] } : { x: 0 }}
                         transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
                         className="w-1/2 h-full bg-blue-500/50 blur-[2px]"
                       />
