@@ -26,12 +26,12 @@ export default function OverviewPage() {
       const initialData = await res.json()
       
       if (initialData.status === "PARTIAL_OFFLINE") {
-        setAutopilotData(prev => ({ ...prev, status: "Demo Mode Active (DB Offline)" }))
+        setAutopilotData((prev: any) => ({ ...prev, status: "Demo Mode Active (DB Offline)" }))
       } else {
-        setAutopilotData(prev => ({ ...prev, status: "Generating Viral Content..." }))
+        setAutopilotData((prev: any) => ({ ...prev, status: "Generating Viral Content..." }))
       }
       
-      const enrichedEntities = []
+      const enrichedEntities: any[] = []
       
       // 2. Generate scripts for each one by one (to avoid Vercel timeouts)
       for (const ent of initialData.entities) {
@@ -47,13 +47,13 @@ export default function OverviewPage() {
           })
           const scriptData = await scriptRes.json()
           enrichedEntities.push({ ...ent, script: scriptData.script || "Script processing..." })
-          setAutopilotData(prev => ({ ...prev, entities: [...enrichedEntities] })) 
+          setAutopilotData((prev: any) => ({ ...prev, entities: [...enrichedEntities] })) 
         } catch (e) {
           enrichedEntities.push({ ...ent, script: "Neural bottleneck. Generating manually later." })
-          setAutopilotData(prev => ({ ...prev, entities: [...enrichedEntities] }))
+          setAutopilotData((prev: any) => ({ ...prev, entities: [...enrichedEntities] }))
         }
       }
-      setAutopilotData(prev => ({ ...prev, status: "Production Ready" }))
+      setAutopilotData((prev: any) => ({ ...prev, status: "Production Ready" }))
     } catch (e) {
       console.error(e)
       setAutopilotData({ entities: [], status: "Connection Error" })
