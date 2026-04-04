@@ -13,7 +13,9 @@ import {
   ShieldCheck,
   CheckCircle2,
   MoreVertical,
-  Dna
+  Dna,
+  RefreshCcw,
+  Zap
 } from 'lucide-react'
 import useSWR, { mutate } from 'swr'
 
@@ -22,6 +24,14 @@ const fetcher = (url: string) => fetch(url).then(res => res.json())
 export default function MatrixPage() {
   const { data: personas, isLoading } = useSWR('/api/personas', fetcher)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+  
+  async function handleSuperSync() {
+    setIsSyncing(true)
+    await fetch('/api/db-sync')
+    mutate('/api/personas')
+    setTimeout(() => setIsSyncing(false), 1000)
+  }
   
   // Form State
   const [name, setName] = useState('')
@@ -60,12 +70,21 @@ export default function MatrixPage() {
               </h1>
             </div>
 
-            <button 
-              onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 px-8 py-4 bg-white text-black rounded-xl text-xs font-black uppercase tracking-widest hover:bg-zinc-200 transition-all shadow-xl shadow-white/5"
-            >
-              Deploy New Entity <Plus size={16} />
-            </button>
+            <div className="flex gap-4">
+              <button 
+                onClick={handleSuperSync}
+                className="flex items-center gap-2 px-6 py-4 bg-zinc-900 border border-white/5 text-zinc-400 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all shadow-xl"
+              >
+                {isSyncing ? <RefreshCcw className="animate-spin" size={16} /> : <Zap size={16} />}
+                Super Sync
+              </button>
+              <button 
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center gap-2 px-8 py-4 bg-white text-black rounded-xl text-xs font-black uppercase tracking-widest hover:bg-zinc-200 transition-all shadow-xl shadow-white/5"
+              >
+                Deploy New Entity <Plus size={16} />
+              </button>
+            </div>
           </div>
 
           {isLoading ? (

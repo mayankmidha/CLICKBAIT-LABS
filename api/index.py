@@ -29,26 +29,40 @@ def init_cloud_db():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        # 1. Create base table
         cur.execute('''CREATE TABLE IF NOT EXISTS personas
                      (id SERIAL PRIMARY KEY, 
                       name TEXT NOT NULL, 
                       niche TEXT, 
                       prompt TEXT,
                       youtube_id TEXT,
-                      insta_id TEXT,
-                      seed BIGINT)''')
+                      insta_id TEXT)''')
+        
+        # 2. Self-Healing: Check for seed column
+        cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name='personas' AND column_name='seed'")
+        if not cur.fetchone():
+            print("Fixing Database: Adding 'seed' column...")
+            cur.execute("ALTER TABLE personas ADD COLUMN seed BIGINT DEFAULT 555555")
+        
+        # 3. Create calendar
         cur.execute('''CREATE TABLE IF NOT EXISTS content_calendar
                      (id SERIAL PRIMARY KEY, 
                       persona_id INTEGER REFERENCES personas(id), 
                       topic TEXT, 
                       scheduled_time TEXT, 
                       status TEXT DEFAULT 'QUEUED')''')
+        
         conn.commit()
         cur.close()
         conn.close()
-        print("Cloud DB Initialized Successfully")
+        return "DATABASE_READY"
     except Exception as e:
-        print(f"DB Init Error: {e}")
+        return f"DATABASE_ERROR: {str(e)}"
+
+@app.get("/api/db-sync")
+async def db_sync():
+    status = init_cloud_db()
+    return {"status": status}
 
 # Try to init on startup
 try:
@@ -143,12 +157,16 @@ async def list_personas():
         return [{"id": 1, "name": "Nova (Demo)", "niche": "AI", "prompt": "..."}]
 
 @app.post("/api/personas")
-async def create_persona(p: dict):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("INSERT INTO personas (name, niche, prompt, youtube_id, insta_id, seed) VALUES (%s,%s,%s,%s,%s,%s)", 
-              (p['name'], p['niche'], p['prompt'], p.get('youtube_id'), p.get('insta_id'), p.get('seed')))
-    conn.commit()
-    cur.close()
-    conn.close()
-    return {"status": "success"}
+async def create_persona(req: Request):
+    p = await req.json()
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("INSERT INTO personas (name, niche, prompt, youtube_id, insta_id, seed) VALUES (%s,%s,%s,%s,%s,%s)", 
+                  (p.get('name'), p.get('niche'), p.get('prompt'), p.get('youtube_id'), p.get('insta_id'), p.get('seed')))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
