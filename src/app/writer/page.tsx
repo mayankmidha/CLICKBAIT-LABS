@@ -7,14 +7,14 @@ import {
   Sparkles, 
   Search, 
   Terminal, 
-  Copy, 
+  Clipboard, 
   Send, 
   Flame, 
   Zap, 
   ChevronRight,
   Loader2,
-  Check,
-  Clapperboard
+  CheckCircle,
+  Video
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -158,14 +158,14 @@ export default function WriterPage() {
                           onClick={handleCopy}
                           className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors"
                         >
-                          {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                          {copied ? <CheckCircle size={14} className="text-emerald-500" /> : <Clipboard size={14} />}
                           {copied ? "Copied" : "Copy"}
                         </button>
                         <button 
                           onClick={pushToStudio}
                           className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-purple-400 hover:text-purple-300 transition-colors"
                         >
-                          <Clapperboard size={14} />
+                          <Video size={14} />
                           Push to Studio
                         </button>
                       </div>

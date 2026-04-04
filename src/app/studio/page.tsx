@@ -4,10 +4,9 @@ import { useState, useEffect } from 'react'
 import { Sidebar } from '@/components/Sidebar'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  Clapperboard, 
+  Video, 
   Sparkles, 
   Image as ImageIcon, 
-  Video, 
   Zap, 
   ArrowRight,
   ShieldCheck,
@@ -15,12 +14,12 @@ import {
   Layout,
   Plus,
   Loader2,
-  Copy,
-  Check,
-  RefreshCw,
+  Clipboard,
+  CheckCircle,
+  RotateCcw,
   Download
 } from 'lucide-react'
-import useSWR from 'swr'
+import useSWR, { mutate } from 'swr'
 
 const fetcher = (url: string) => fetch(url).then(res => res.json())
 
@@ -115,7 +114,7 @@ export default function StudioPage() {
               <div className="bg-zinc-900/30 border border-white/5 rounded-3xl p-10 space-y-8 backdrop-blur-xl">
                 <div className="flex justify-between items-center px-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Active Persona</label>
-                  <button onClick={() => mutate('/api/personas')} className="text-zinc-600 hover:text-white transition-colors"><RefreshCw size={12} /></button>
+                  <button onClick={() => mutate('/api/personas')} className="text-zinc-600 hover:text-white transition-colors"><RotateCcw size={12} /></button>
                 </div>
                 <select 
                   value={selectedPersona}
@@ -188,7 +187,7 @@ export default function StudioPage() {
                         onClick={copyPrompt}
                         className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity bg-white/5 p-2 rounded-lg hover:bg-white/10"
                       >
-                        {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                        {copied ? <CheckCircle size={14} className="text-emerald-500" /> : <Clipboard size={14} />}
                       </button>
                     </div>
                     <button className="text-[10px] font-black uppercase tracking-widest text-zinc-600 hover:text-white transition-colors flex items-center gap-2 ml-auto group">
@@ -229,7 +228,7 @@ export default function StudioPage() {
                   ) : (
                     <div className="relative z-20 flex flex-col items-center">
                       <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6 animate-pulse">
-                        <Clapperboard size={32} strokeWidth={1} className="text-zinc-600" />
+                        <Video size={32} strokeWidth={1} className="text-zinc-600" />
                       </div>
                       <p className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-700">Production Standby</p>
                     </div>
