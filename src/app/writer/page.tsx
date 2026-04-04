@@ -1,26 +1,38 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Sidebar } from '@/components/Sidebar'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Sparkles, 
   Search, 
   Terminal, 
+  Copy, 
   Send, 
   Flame, 
   Zap, 
   ChevronRight,
-  Loader2
+  Loader2,
+  Check,
+  Clapperboard
 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 export default function WriterPage() {
+  const router = useRouter()
   const [topic, setTopic] = useState('')
   const [niche, setNiche] = useState('AI & Tech')
   const [style, setStyle] = useState('Aggressive Viral')
   const [isGenerating, setIsGenerating] = useState(false)
   const [script, setScript] = useState('')
   const [logs, setLogs] = useState<string[]>([])
+  const [copied, setCopied] = useState(false)
+
+  // Persistent storage check
+  useEffect(() => {
+    const saved = localStorage.getItem('last_script')
+    if (saved) setScript(saved)
+  }, [])
 
   async function handleGenerate() {
     if (!topic) return
@@ -28,7 +40,6 @@ export default function WriterPage() {
     setLogs(["[SYS] Initiating Global Research Scan..."])
     
     try {
-      // 1. Research Phase
       const resRes = await fetch('/api/research', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -37,7 +48,6 @@ export default function WriterPage() {
       const resData = await resRes.json()
       setLogs(prev => [...prev, ...resData.logs, "[SYS] Research synthesized. Engaging Legendary Writer..."])
 
-      // 2. Generation Phase
       const scriptRes = await fetch('/api/generate-script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -45,12 +55,24 @@ export default function WriterPage() {
       })
       const scriptData = await scriptRes.json()
       setScript(scriptData.script)
+      localStorage.setItem('last_script', scriptData.script)
       setLogs(prev => [...prev, "[SYS] Script deployment successful."])
     } catch (error) {
       setLogs(prev => [...prev, "[ERR] Neural Link Interrupted."])
     } finally {
       setIsGenerating(false)
     }
+  }
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(script)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const pushToStudio = () => {
+    localStorage.setItem('studio_script', script)
+    router.push('/studio')
   }
 
   return (
@@ -73,7 +95,6 @@ export default function WriterPage() {
 
           <div className="grid lg:grid-cols-5 gap-12">
             
-            {/* Input Panel */}
             <div className="lg:col-span-3 space-y-8">
               <div className="bg-zinc-900/30 border border-white/5 rounded-3xl p-10 space-y-8 backdrop-blur-xl">
                 <div className="space-y-3">
@@ -131,10 +152,25 @@ export default function WriterPage() {
                 >
                   <div className="relative z-10">
                     <div className="flex justify-between items-center mb-8">
-                      <h3 className="text-sm font-black uppercase tracking-widest text-zinc-500">Master Draft</h3>
-                      <button className="text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Copy Script</button>
+                      <h3 className="text-sm font-black uppercase tracking-widest text-zinc-500 italic">Master Draft</h3>
+                      <div className="flex gap-4">
+                        <button 
+                          onClick={handleCopy}
+                          className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors"
+                        >
+                          {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                          {copied ? "Copied" : "Copy"}
+                        </button>
+                        <button 
+                          onClick={pushToStudio}
+                          className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-purple-400 hover:text-purple-300 transition-colors"
+                        >
+                          <Clapperboard size={14} />
+                          Push to Studio
+                        </button>
+                      </div>
                     </div>
-                    <div className="text-lg leading-relaxed text-zinc-300 whitespace-pre-wrap font-medium italic">
+                    <div className="text-lg leading-relaxed text-zinc-300 whitespace-pre-wrap font-medium italic border-l-2 border-white/5 pl-8 py-4 bg-white/[0.02] rounded-r-2xl">
                       {script}
                     </div>
                   </div>
@@ -143,9 +179,8 @@ export default function WriterPage() {
               )}
             </div>
 
-            {/* Research HUD */}
             <div className="lg:col-span-2 space-y-8">
-               <div className="bg-black border border-white/5 rounded-3xl p-8 h-fit">
+               <div className="bg-black border border-white/5 rounded-3xl p-8 h-fit shadow-2xl">
                   <div className="flex items-center gap-3 mb-8">
                     <Terminal size={18} className="text-emerald-500" />
                     <h3 className="text-xs font-black uppercase tracking-widest text-zinc-500">System Scan</h3>
@@ -171,10 +206,10 @@ export default function WriterPage() {
                   </div>
                </div>
 
-               <div className="bg-zinc-900/20 border border-dashed border-white/5 rounded-3xl p-8 text-center space-y-4">
+               <div className="bg-gradient-to-br from-zinc-900 to-black border border-white/5 rounded-3xl p-8 text-center space-y-4 shadow-xl">
                   <Flame size={24} className="mx-auto text-orange-500 opacity-40" />
-                  <p className="text-xs text-zinc-500 font-medium leading-relaxed">
-                    This module uses real-time DuckDuckGo scraping to find controversial angles that beat the algorithm.
+                  <p className="text-xs text-zinc-500 font-medium leading-relaxed italic">
+                    AI just synthesized real-time signals from 12 news outlets to maximize your retention floor.
                   </p>
                </div>
             </div>
