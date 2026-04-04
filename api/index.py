@@ -74,6 +74,9 @@ class ProjectCreate(BaseModel):
     title: str
     topic: str
 
+class ActionRequest(BaseModel):
+    project_id: int
+
 class ImageGenRequest(BaseModel):
     persona_name: str
     prompt_override: Optional[str] = None
@@ -83,7 +86,7 @@ class ImageGenRequest(BaseModel):
 
 @app.get("/api/health")
 async def health():
-    return {"status": "Clickbait Labs OS v3.4 - Project Engine Active"}
+    return {"status": "Clickbait Labs OS v3.5 - Pipeline Restored"}
 
 @app.get("/api/personas")
 async def get_personas():
@@ -145,66 +148,71 @@ async def get_project(id: int):
     project = cur.fetchone()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    
     cur.execute("SELECT * FROM renders WHERE project_id = %s", (id,))
     renders = cur.fetchall()
-    
     cur.close()
     conn.close()
     return {**project, "renders": renders}
 
-@app.post("/api/projects/{id}/research")
-async def run_research(id: int):
+@app.post("/api/research")
+async def run_research(req: ActionRequest):
+    id = req.project_id
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT topic FROM projects WHERE id = %s", (id,))
     topic = cur.fetchone()[0]
-    
     content = ""
     try:
         with DDGS() as ddgs:
-            res1 = ddgs.text(f"viral news trends {topic}", max_results=3)
-            res2 = ddgs.text(f"site:reddit.com {topic} opinions", max_results=2)
-            combined = list(res1) + list(res2)
-            for r in combined:
-                content += f"\n- {r['body']}"
-    except Exception as e:
-        content = f"Scan: {e}"
-
+            res1 = ddgs.text(f"viral trends {topic}", max_results=3)
+            for r in res1: content += f"\n- {r['body']}"
+    except: content = "Research mode active."
     cur.execute("UPDATE projects SET research_content = %s, status = 'RESEARCHED' WHERE id = %s", (content, id))
     conn.commit()
     cur.close()
     conn.close()
     return {"content": content}
 
-@app.post("/api/projects/{id}/generate-script")
-async def run_scriptwriter(id: int):
+@app.post("/api/generate-script")
+async def run_scriptwriter(req: ActionRequest):
+    id = req.project_id
     api_key = os.getenv("GEMINI_API_KEY")
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""SELECT p.topic, p.research_content, per.name, per.prompt 
                  FROM projects p JOIN personas per ON p.persona_id = per.id WHERE p.id = %s""", (id,))
     data = cur.fetchone()
-    
-    prompt = (
-        "ACT AS A $100M VIRAL CREATOR. USE TRIPLE-PASS TECHNIQUE.\n"
-        f"PERSONA: {data[2]}. TOPIC: {data[0]}. RESEARCH: {data[1]}.\n"
-        "GOAL: Write a high-retention script (Max 180 words). Output ONLY script."
-    )
-    
+    prompt = f"Write viral script for {data[2]} on {data[0]}. Research: {data[1]}. Max 180 words."
     try:
         client = genai.Client(api_key=api_key)
-        response = client.models.generate_content(model="gemini-1.5-pro", contents=prompt)
-        script = response.text
+        script = client.models.generate_content(model="gemini-1.5-pro", contents=prompt).text
     except:
-        encoded = requests.utils.quote(prompt)
-        script = requests.get(f"https://text.pollinations.ai/{encoded}?model=openai").text
-
+        script = requests.get(f"https://text.pollinations.ai/{requests.utils.quote(prompt)}?model=openai").text
     cur.execute("UPDATE projects SET script = %s, status = 'SCRIPTED' WHERE id = %s", (script, id))
     conn.commit()
     cur.close()
     conn.close()
     return {"script": script}
+
+@app.post("/api/render-image")
+async def run_visualizer(req: ActionRequest):
+    id = req.project_id
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""SELECT per.prompt, per.seed, p.script 
+                 FROM projects p JOIN personas per ON p.persona_id = per.id WHERE p.id = %s""", (id,))
+    data = cur.fetchone()
+    prefix = "Hyper-realistic raw photo, 8k UHD, 35mm lens, f/1.8, "
+    suffix = ", visible skin pores, natural skin texture, cinematic lighting, sharp focus."
+    prompt = f"{prefix}{data[0]}, {data[2][:100]}{suffix}"
+    encoded = requests.utils.quote(prompt)
+    url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1792&model=flux&seed={data[1]}&nologo=true"
+    cur.execute("INSERT INTO renders (project_id, url, type) VALUES (%s, %s, 'image')", (id, url))
+    cur.execute("UPDATE projects SET status = 'VISUALIZED' WHERE id = %s", (id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {"url": url}
 
 @app.get("/api/factory-reset")
 async def factory_reset():
@@ -223,12 +231,3 @@ async def factory_reset():
     cur.close()
     conn.close()
     return {"status": "SUCCESS"}
-
-@app.post("/api/generate-image")
-async def generate_image(req: ImageGenRequest):
-    prefix = "Hyper-realistic 8k UHD raw photo of a beautiful WOMAN, highly detailed feminine facial features, "
-    suffix = ", visible skin pores, natural skin texture, 35mm lens, f/1.8, cinematic studio lighting, sharp focus, masterwork."
-    full_prompt = f"{prefix}{req.prompt_override}{suffix}"
-    encoded = requests.utils.quote(full_prompt)
-    image_url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1792&model=flux&seed={req.seed}&nologo=true"
-    return {"url": image_url}

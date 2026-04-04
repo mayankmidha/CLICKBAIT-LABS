@@ -39,8 +39,11 @@ export default function ProjectWorkspace() {
     setIsProcessing(true)
     setLogs(["[SYS] Initiating Deep Web Triple-Scan..."])
     try {
-      const res = await fetch(`/api/projects/${id}/research`, { method: 'POST' })
-      const data = await res.json()
+      const res = await fetch(`/api/research`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: parseInt(id as string) })
+      })
       mutate(`/api/projects/${id}`)
       setLogs(prev => [...prev, "[SYS] Research synthesized. Signals extracted."])
     } catch (e) {
@@ -54,8 +57,11 @@ export default function ProjectWorkspace() {
     setIsProcessing(true)
     setLogs(prev => [...prev, "[SYS] Engaging Triple-Pass Scriptwriter..."])
     try {
-      const res = await fetch(`/api/projects/${id}/generate-script`, { method: 'POST' })
-      const data = await res.json()
+      const res = await fetch(`/api/generate-script`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: parseInt(id as string) })
+      })
       mutate(`/api/projects/${id}`)
       setLogs(prev => [...prev, "[SYS] Script deployed to production buffer."])
     } catch (e) {
@@ -68,7 +74,11 @@ export default function ProjectWorkspace() {
   async function runRender() {
     setIsProcessing(true)
     try {
-      const res = await fetch(`/api/projects/${id}/render-image`, { method: 'POST' })
+      const res = await fetch(`/api/render-image`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: parseInt(id as string) })
+      })
       mutate(`/api/projects/${id}`)
     } catch (e) {
       console.error(e)
