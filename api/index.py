@@ -60,6 +60,8 @@ class ScriptRequest(BaseModel):
     topic: str
     niche: str
     style: str
+    persona_name: Optional[str] = None
+    persona_dna: Optional[str] = None
     api_key: Optional[str] = None
 
 class ImageRequest(BaseModel):
@@ -107,14 +109,19 @@ async def research(request: Request):
 
 @app.post("/api/generate-script")
 async def generate_script(req: ScriptRequest):
-    # TRIPLE-PASS Instruction
+    # TRIPLE-PASS Instruction with Persona Context
+    persona_context = f"PERSONA NAME: {req.persona_name}. PERSONA DNA: {req.persona_dna}." if req.persona_name else ""
+    
     prompt = (
         "ACT AS A $100M DIRECT-RESPONSE MARKETER AND VIRAL CREATOR. "
         "YOUR GOAL IS 100% RETENTION. USE TRIPLE-PASS TECHNIQUE:\n"
         "PASS 1: STRUCTURE - Create a high-tension narrative arc.\n"
         "PASS 2: PSYCHOLOGY - Inject Curiosity Gaps, Pattern Interrupts, and Status Signaling.\n"
         "PASS 3: POLISH - Write for 'MrBeast-Style' pacing and clarity.\n\n"
+        f"{persona_context}\n"
         f"TOPIC: {req.topic}. NICHE: {req.niche}. STYLE: {req.style}.\n"
+        "INSTRUCTION: Adopt the specific voice, background, and ethnicity of the persona. "
+        "Ensure the script sounds like THIS person speaking, not a generic AI. "
         "Output ONLY the final script text. Max 180 words."
     )
 

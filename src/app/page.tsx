@@ -7,11 +7,51 @@ import { Zap, Loader2, ArrowRight, RotateCcw, CheckCircle2, AlertTriangle } from
 import { useRouter } from 'next/navigation'
 
 const PERSONAS = [
-  { name: 'Aura',  niche: 'AI & Tech', seed: 555555,  dna: 'Japanese-Brazilian tech minimalist, black turtleneck, lab background',       color: 'from-blue-500/20 to-blue-500/5',   badge: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
-  { name: 'Kira',  niche: 'Finance',   seed: 7721094, dna: 'Indo-Australian wealth strategist, Sydney coastal office, professional linen', color: 'from-emerald-500/20 to-emerald-500/5', badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
-  { name: 'Elara', niche: 'Luxury',    seed: 338812,  dna: 'Indo-French fashion visionary, Paris studio, silk and structured style',       color: 'from-amber-500/20 to-amber-500/5',  badge: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-  { name: 'Maya',  niche: 'Fitness',   seed: 992211,  dna: 'Scandinavian-Indian biohacker, minimalist gym, focused and athletic',          color: 'from-rose-500/20 to-rose-500/5',    badge: 'bg-rose-500/10 text-rose-400 border-rose-500/20' },
-  { name: 'Luna',  niche: 'Gaming',    seed: 445566,  dna: 'American-Indian pro-gamer, neon cyberpunk setup, high-energy',                color: 'from-purple-500/20 to-purple-500/5', badge: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
+  { 
+    name: 'Aura',  
+    niche: 'AI & Tech', 
+    seed: 555555,  
+    dna: 'Japanese-Brazilian tech minimalist, black turtleneck, lab background', 
+    topic: 'Why your GPU is about to become obsolete',
+    color: 'from-blue-500/20 to-blue-500/5',   
+    badge: 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
+  },
+  { 
+    name: 'Kira',  
+    niche: 'Finance',   
+    seed: 7721094, 
+    dna: 'Indo-Australian wealth strategist, Sydney coastal office, professional linen', 
+    topic: 'The secret inflation hedge the 1% are using',
+    color: 'from-emerald-500/20 to-emerald-500/5', 
+    badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+  },
+  { 
+    name: 'Elara', 
+    niche: 'Luxury',    
+    seed: 338812,  
+    dna: 'Indo-French fashion visionary, Paris studio, silk and structured style', 
+    topic: 'Why quiet luxury is dying in 2026',
+    color: 'from-amber-500/20 to-amber-500/5',  
+    badge: 'bg-amber-500/10 text-amber-400 border-amber-500/20' 
+  },
+  { 
+    name: 'Maya',  
+    niche: 'Fitness',   
+    seed: 992211,  
+    dna: 'Scandinavian-Indian biohacker, minimalist gym, focused and athletic', 
+    topic: '3 biohacks to double your energy in 24 hours',
+    color: 'from-rose-500/20 to-rose-500/5',    
+    badge: 'bg-rose-500/10 text-rose-400 border-rose-500/20' 
+  },
+  { 
+    name: 'Luna',  
+    niche: 'Gaming',    
+    seed: 445566,  
+    dna: 'American-Indian pro-gamer, neon cyberpunk setup, high-energy', 
+    topic: 'The game that will kill the open world genre',
+    color: 'from-purple-500/20 to-purple-500/5', 
+    badge: 'bg-purple-500/10 text-purple-400 border-purple-500/20' 
+  },
 ]
 
 type ScriptState = { text: string; loading: boolean; source?: string }
@@ -21,13 +61,20 @@ export default function OverviewPage() {
   const [scripts, setScripts]       = useState<Record<string, ScriptState>>({})
   const [generatingAll, setGeneratingAll] = useState(false)
 
-  async function generateScript(name: string, niche: string) {
+  async function generateScript(persona: typeof PERSONAS[0]) {
+    const { name, niche, dna, topic } = persona
     setScripts(prev => ({ ...prev, [name]: { text: '', loading: true } }))
     try {
       const res = await fetch('/api/generate-script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic: `Viral debut content for ${name}`, niche, style: 'Aggressive Viral' }),
+        body: JSON.stringify({ 
+          topic: topic, 
+          niche, 
+          style: 'Aggressive Viral',
+          persona_name: name,
+          persona_dna: dna
+        }),
       })
       const data = await res.json()
       setScripts(prev => ({ ...prev, [name]: { text: data.script || 'Generation failed.', loading: false, source: data.source } }))
@@ -39,7 +86,7 @@ export default function OverviewPage() {
   async function generateAll() {
     setGeneratingAll(true)
     for (const p of PERSONAS) {
-      await generateScript(p.name, p.niche)
+      await generateScript(p)
     }
     setGeneratingAll(false)
   }
@@ -124,7 +171,7 @@ export default function OverviewPage() {
                     {/* Actions */}
                     <div className="shrink-0 flex gap-3">
                       <button
-                        onClick={() => generateScript(persona.name, persona.niche)}
+                        onClick={() => generateScript(persona)}
                         disabled={isLoading}
                         className="flex items-center gap-1.5 px-4 py-2 bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-40"
                       >
