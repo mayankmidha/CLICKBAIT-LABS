@@ -18,10 +18,34 @@ export default function OverviewPage() {
   
   async function runAutopilot() {
     setIsBuilding(true)
+    setAutopilotData({ entities: [] })
     try {
+      // 1. Create all 5 personas rapidly
       const res = await fetch('/api/empire-builder')
-      const data = await res.json()
-      setAutopilotData(data)
+      const initialData = await res.json()
+      
+      const enrichedEntities = []
+      
+      // 2. Generate scripts for each one by one (to avoid Vercel timeouts)
+      for (const ent of initialData.entities) {
+        try {
+          const scriptRes = await fetch('/api/generate-script', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              topic: `Viral debut for ${ent.name}`, 
+              niche: ent.niche, 
+              style: 'Aggressive Viral' 
+            })
+          })
+          const scriptData = await scriptRes.json()
+          enrichedEntities.push({ ...ent, script: scriptData.script })
+          setAutopilotData({ entities: [...enrichedEntities] }) // Update UI live
+        } catch (e) {
+          enrichedEntities.push({ ...ent, script: "Script generation failed. Try manual." })
+          setAutopilotData({ entities: [...enrichedEntities] })
+        }
+      }
     } catch (e) {
       console.error(e)
     } finally {
