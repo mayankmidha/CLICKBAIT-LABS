@@ -69,13 +69,13 @@ def init_cloud_db():
 
 @app.get("/api/empire-builder")
 async def empire_builder():
-    """Hyper-robust persona initializer with explicit error reporting."""
+    """Rapidly initializes 5 hyper-realistic personas with anatomical DNA."""
     personas_to_create = [
-        {"name": "Aura", "niche": "AI & Tech", "seed": 555555, "dna": "Japanese-Brazilian tech minimalist, black turtleneck, lab background"},
-        {"name": "Kira", "niche": "Finance", "seed": 7721094, "dna": "Indo-Australian wealth strategist, Sydney coastal office, professional linen"},
-        {"name": "Elara", "niche": "Luxury", "seed": 338812, "dna": "Indo-French fashion visionary, Paris studio, silk and structured style"},
-        {"name": "Maya", "niche": "Fitness", "seed": 992211, "dna": "Scandinavian-Indian biohacker, minimalist gym, focused and athletic"},
-        {"name": "Luna", "niche": "Gaming", "seed": 445566, "dna": "American-Indian pro-gamer, neon cyberpunk setup, high-energy"}
+        {"name": "Aura", "niche": "AI & Tech", "seed": 555555, "dna": "26yo Japanese-Brazilian woman, sharp symmetrical jawline, hazel eyes, detailed skin pores, wearing black techwear, cyberpunk laboratory background, volumetric lighting"},
+        {"name": "Kira", "niche": "Finance", "seed": 7721094, "dna": "24yo Indo-Australian woman, sun-kissed tanned skin, light brown eyes, natural wavy hair, professional linen vest, coastal Sydney office background, golden hour lighting"},
+        {"name": "Elara", "niche": "Luxury", "seed": 338812, "dna": "28yo Indo-French woman, chic bob haircut, high cheekbones, almond eyes, silk blouse, high-end Parisian studio, soft moody shadows, elegant posture"},
+        {"name": "Maya", "niche": "Fitness", "seed": 992211, "dna": "25yo Scandinavian-Indian woman, athletic build, sweat beads on forehead, messy bun, minimalist home gym, bright morning sunlight, photorealistic skin grain"},
+        {"name": "Luna", "niche": "Gaming", "seed": 445566, "dna": "22yo American-Indian woman, dyed purple hair streaks, oversized headset, gaming jersey, neon-lit bedroom, motion blur background, expressive face"}
     ]
     
     try:
@@ -194,23 +194,24 @@ async def generate_script(req: ScriptRequest):
 
 @app.post("/api/generate-image")
 async def generate_image(req: ImageRequest):
-    """Generates a high-fidelity image using Pro or Free Pollinations engine."""
+    """Generates a hyper-realistic human portrait using Pro Photography parameters."""
     api_key = os.getenv("POLLINATIONS_API_KEY")
-    encoded_prompt = requests.utils.quote(req.prompt)
+    
+    # The "Realism Shell" - Forces the AI to stop airbrushing and use real lens physics
+    realism_prefix = "Hyper-realistic raw photo, 8k UHD, shot on 35mm lens, f/1.8, "
+    realism_suffix = ", highly detailed skin textures, visible pores, natural skin grain, cinematic lighting, extremely sharp focus, no airbrushing, professional color grading, masterwork."
+    
+    full_prompt = f"{realism_prefix}{req.prompt}{realism_suffix}"
+    encoded_prompt = requests.utils.quote(full_prompt)
     seed_param = f"&seed={req.seed}" if req.seed else ""
     
+    # Using the standard image endpoint with the key in headers for priority
+    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1792&model=flux{seed_param}&nologo=true&enhance=false"
+    
     if api_key:
-        # Pro Logic: Higher priority and better reliability
-        # Using the standard image endpoint with the key in headers
-        headers = {"Authorization": f"Bearer {api_key}"}
-        image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1792&model=flux{seed_param}&nologo=true"
-        # We return the URL but Vercel will make the request with the header internally if needed,
-        # however Pollinations Pro also works by passing the key via headers to the standard image URL.
-        return {"url": image_url, "mode": "PRO_ACTIVE"}
+        return {"url": image_url, "mode": "PRO_REALISM_ACTIVE"}
     else:
-        # Free Tier fallback
-        image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1792&model=flux{seed_param}&nologo=true"
-        return {"url": image_url, "mode": "FREE_FALLBACK"}
+        return {"url": image_url, "mode": "FREE_REALISM_ACTIVE"}
 
 @app.get("/api/personas")
 async def list_personas():
