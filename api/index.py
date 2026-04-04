@@ -191,7 +191,7 @@ async def create_persona(req: Request):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("INSERT INTO personas (name, niche, prompt, youtube_id, insta_id, seed) VALUES (%s,%s,%s,%s,%s,%s)", 
+        cur.execute("INSERT INTO personas (name, niche, prompt, youtube_id, insta_id, seed) VALUES (%s,%s,%s,%s,%s,%s)",
                   (p.get('name'), p.get('niche'), p.get('prompt'), p.get('youtube_id'), p.get('insta_id'), p.get('seed')))
         conn.commit()
         cur.close()
@@ -199,3 +199,65 @@ async def create_persona(req: Request):
         return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/db-sync")
+async def db_sync():
+    result = init_cloud_db()
+    return {"status": result}
+
+@app.get("/api/calendar")
+async def get_calendar():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT cc.id, cc.topic, cc.scheduled_time, cc.status, p.name as persona
+            FROM content_calendar cc
+            LEFT JOIN personas p ON cc.persona_id = p.id
+            ORDER BY cc.scheduled_time ASC
+        """)
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        return list(rows)
+    except Exception as e:
+        return []
+
+@app.post("/api/calendar")
+async def create_calendar_event(req: Request):
+    data = await req.json()
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO content_calendar (persona_id, topic, scheduled_time, status) VALUES (%s,%s,%s,%s)",
+            (data.get('persona_id'), data.get('topic'), data.get('scheduled_time'), data.get('status', 'QUEUED'))
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/generate-thumbnail")
+async def generate_thumbnail(req: Request):
+    data = await req.json()
+    script = data.get("script", "")
+    persona = data.get("persona", "")
+    api_key = data.get("api_key") or os.getenv("GEMINI_API_KEY")
+
+    if not api_key:
+        prompt = f"YouTube thumbnail for {persona}, bold text overlay, cinematic lighting, high contrast, viral style"
+        return {"prompt": prompt}
+
+    try:
+        client = genai.Client(api_key=api_key)
+        req_prompt = (
+            f"Generate a YouTube thumbnail image prompt for this script: '{script[:300]}'. "
+            f"Influencer name: {persona}. Output ONLY the image generation prompt, max 80 words, no explanation."
+        )
+        response = client.models.generate_content(model="gemini-1.5-pro", contents=req_prompt)
+        return {"prompt": response.text.strip()}
+    except Exception as e:
+        return {"prompt": f"Cinematic portrait of {persona}, YouTube thumbnail style, bold typography, high contrast, viral energy"}

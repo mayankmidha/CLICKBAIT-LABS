@@ -1,10 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import { Sidebar } from '@/components/Sidebar'
 import { StatsGrid } from '@/components/StatsGrid'
 import { StudioCanvas } from '@/components/StudioCanvas'
 import { motion } from 'framer-motion'
-import { Sparkles, ArrowUpRight } from 'lucide-react'
+import { Sparkles, ArrowUpRight, Loader2 } from 'lucide-react'
 import useSWR from 'swr'
 
 const fetcher = (url: string) => fetch(url).then(res => res.json())
