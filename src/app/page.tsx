@@ -66,9 +66,9 @@ export default function OverviewPage() {
           }),
         })
         const data = await res.json()
-        script = data.script || 'Script unavailable — check your Gemini API key.'
-      } catch {
-        script = 'Script unavailable — check your Gemini API key.'
+        script = data.script || `Error: ${data.error || data.detail || 'Unknown API error'}`
+      } catch (err: any) {
+        script = `Network error: ${err?.message || 'Could not reach API'}`
       }
       filled.push({ ...ent, script, loading: false })
       setPersonas([...filled, ...entities.slice(i + 1).map((e: Persona) => ({ ...e, loading: true }))])

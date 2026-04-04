@@ -147,10 +147,10 @@ async def generate_script(req: ScriptRequest):
     try:
         client = genai.Client(api_key=api_key)
         prompt = f"ACT AS LEGENDARY WRITER. TOPIC: {req.topic}, NICHE: {req.niche}, STYLE: {req.style}. Format: HOOK, BUILD, VALUE, PATTERN INTERRUPT, CTA."
-        response = client.models.generate_content(model="gemini-1.5-pro", contents=prompt)
+        response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
         return {"script": response.text}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"script": None, "error": str(e)}
 
 @app.post("/api/generate-image")
 async def generate_image(req: ImageRequest):
@@ -257,7 +257,7 @@ async def generate_thumbnail(req: Request):
             f"Generate a YouTube thumbnail image prompt for this script: '{script[:300]}'. "
             f"Influencer name: {persona}. Output ONLY the image generation prompt, max 80 words, no explanation."
         )
-        response = client.models.generate_content(model="gemini-1.5-pro", contents=req_prompt)
+        response = client.models.generate_content(model="gemini-2.0-flash", contents=req_prompt)
         return {"prompt": response.text.strip()}
     except Exception as e:
         return {"prompt": f"Cinematic portrait of {persona}, YouTube thumbnail style, bold typography, high contrast, viral energy"}
