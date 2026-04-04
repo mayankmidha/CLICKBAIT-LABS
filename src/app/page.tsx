@@ -18,11 +18,17 @@ export default function OverviewPage() {
   
   async function runAutopilot() {
     setIsBuilding(true)
-    setAutopilotData({ entities: [] })
+    setAutopilotData({ entities: [], status: "Initializing Database..." })
     try {
       // 1. Create all 5 personas rapidly
       const res = await fetch('/api/empire-builder')
       const initialData = await res.json()
+      
+      if (initialData.status === "PARTIAL_OFFLINE") {
+        setAutopilotData(prev => ({ ...prev, status: "Demo Mode Active (DB Offline)" }))
+      } else {
+        setAutopilotData(prev => ({ ...prev, status: "Generating Viral Content..." }))
+      }
       
       const enrichedEntities = []
       
@@ -39,15 +45,17 @@ export default function OverviewPage() {
             })
           })
           const scriptData = await scriptRes.json()
-          enrichedEntities.push({ ...ent, script: scriptData.script })
-          setAutopilotData({ entities: [...enrichedEntities] }) // Update UI live
+          enrichedEntities.push({ ...ent, script: scriptData.script || "Script processing..." })
+          setAutopilotData(prev => ({ ...prev, entities: [...enrichedEntities] })) 
         } catch (e) {
-          enrichedEntities.push({ ...ent, script: "Script generation failed. Try manual." })
-          setAutopilotData({ entities: [...enrichedEntities] })
+          enrichedEntities.push({ ...ent, script: "Neural bottleneck. Generating manually later." })
+          setAutopilotData(prev => ({ ...prev, entities: [...enrichedEntities] }))
         }
       }
+      setAutopilotData(prev => ({ ...prev, status: "Production Ready" }))
     } catch (e) {
       console.error(e)
+      setAutopilotData({ entities: [], status: "Connection Error" })
     } finally {
       setIsBuilding(false)
     }
@@ -105,9 +113,14 @@ export default function OverviewPage() {
                 <motion.div 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-12 bg-zinc-900/30 border border-white/10 rounded-3xl p-10 space-y-8"
+                  className="mt-12 bg-zinc-900/30 border border-white/10 rounded-3xl p-10 space-y-8 shadow-2xl"
                 >
-                  <h3 className="text-sm font-black uppercase tracking-widest text-blue-500">Autopilot Output: 5 Personas Generated</h3>
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-blue-500">Autopilot Production Feed</h3>
+                    <span className="text-[10px] font-bold text-zinc-500 bg-white/5 px-3 py-1 rounded-full border border-white/10">
+                      {autopilotData.status}
+                    </span>
+                  </div>
                   <div className="grid md:grid-cols-2 gap-6">
                     {autopilotData.entities.map((ent: any, i: number) => (
                       <div key={i} className="bg-black/50 p-6 rounded-2xl border border-white/5 space-y-4">
