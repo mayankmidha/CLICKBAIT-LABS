@@ -33,6 +33,20 @@ export default function MatrixPage() {
   const [ig, setIg] = useState('')
   const [prompt, setPrompt] = useState('')
   const [seed, setSeed] = useState('555555')
+  const [isSyncing, setIsSyncing] = useState(false)
+
+  async function handleSuperSync() {
+    setIsSyncing(true)
+    try {
+      await fetch('/api/db-sync')
+      await fetch('/api/empire-builder')
+      mutate('/api/personas')
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setTimeout(() => setIsSyncing(false), 1000)
+    }
+  }
 
   async function handleAdd() {
     await fetch('/api/personas', {
@@ -63,12 +77,22 @@ export default function MatrixPage() {
               </h1>
             </div>
 
-            <button 
-              onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 px-8 py-4 bg-white text-black rounded-xl text-xs font-black uppercase tracking-widest hover:bg-zinc-200 transition-all shadow-xl shadow-white/5"
-            >
-              Sign New Talent <Plus size={16} />
-            </button>
+            <div className="flex gap-4">
+              <button 
+                onClick={handleSuperSync}
+                disabled={isSyncing}
+                className="flex items-center gap-2 px-6 py-4 bg-zinc-900 border border-white/5 text-zinc-400 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all shadow-xl disabled:opacity-50"
+              >
+                {isSyncing ? <RotateCcw className="animate-spin" size={16} /> : <Zap size={16} />}
+                Factory Initialize
+              </button>
+              <button 
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center gap-2 px-8 py-4 bg-white text-black rounded-xl text-xs font-black uppercase tracking-widest hover:bg-zinc-200 transition-all shadow-xl shadow-white/5"
+              >
+                Sign New Talent <Plus size={16} />
+              </button>
+            </div>
           </div>
 
           {isLoading ? (

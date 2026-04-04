@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Body
 from pydantic import BaseModel
 import os
 import json
@@ -28,7 +28,7 @@ def init_db():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # 1. Personas (The Identity)
+        # 1. Personas
         cur.execute('''CREATE TABLE IF NOT EXISTS personas
                      (id SERIAL PRIMARY KEY, 
                       name TEXT NOT NULL UNIQUE, 
@@ -38,7 +38,7 @@ def init_db():
                       insta_id TEXT,
                       seed BIGINT DEFAULT 555555)''')
         
-        # 2. Projects (The Content Engine)
+        # 2. Projects
         cur.execute('''CREATE TABLE IF NOT EXISTS projects
                      (id SERIAL PRIMARY KEY, 
                       persona_id INTEGER REFERENCES personas(id), 
@@ -49,7 +49,7 @@ def init_db():
                       status TEXT DEFAULT 'DRAFT',
                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
         
-        # 3. Renders (The Assets)
+        # 3. Renders
         cur.execute('''CREATE TABLE IF NOT EXISTS renders
                      (id SERIAL PRIMARY KEY, 
                       project_id INTEGER REFERENCES projects(id), 
@@ -66,21 +66,19 @@ def init_db():
         print(f"DB Error: {e}")
         return False
 
-# Initialize on boot
-init_db()
-
 # --- Models ---
+class PersonaCreate(BaseModel):
+    name: str
+    niche: str
+    prompt: str
+    youtube_id: Optional[str] = None
+    insta_id: Optional[str] = None
+    seed: Optional[int] = 555555
+
 class ProjectCreate(BaseModel):
     persona_id: int
     title: str
     topic: str
-
-class ScriptUpdate(BaseModel):
-    script: str
-
-class ImageGenRequest(BaseModel):
-    project_id: int
-    prompt_override: Optional[str] = None
 
 # --- API Endpoints ---
 
@@ -88,43 +86,81 @@ class ImageGenRequest(BaseModel):
 async def health():
     return {"status": "Clickbait Labs OS v2.0 Online"}
 
+@app.get("/api/db-sync")
+async def db_sync():
+    success = init_db()
+    return {"status": "SUCCESS" if success else "ERROR"}
+
 # --- Persona Management ---
 @app.get("/api/personas")
 async def get_personas():
-    conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT * FROM personas ORDER BY name ASC")
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
-    return rows
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT * FROM personas ORDER BY id DESC")
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        return rows
+    except Exception as e:
+        return []
 
 @app.post("/api/personas")
-async def create_persona(p: dict):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("""INSERT INTO personas (name, niche, prompt, seed) 
-                 VALUES (%s, %s, %s, %s) ON CONFLICT (name) DO UPDATE 
-                 SET niche=EXCLUDED.niche, prompt=EXCLUDED.prompt, seed=EXCLUDED.seed""",
-              (p['name'], p['niche'], p['prompt'], p.get('seed', 555555)))
-    conn.commit()
-    cur.close()
-    conn.close()
-    return {"status": "success"}
+async def create_persona(p: PersonaCreate):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""INSERT INTO personas (name, niche, prompt, youtube_id, insta_id, seed) 
+                     VALUES (%s, %s, %s, %s, %s, %s) ON CONFLICT (name) DO UPDATE 
+                     SET niche=EXCLUDED.niche, prompt=EXCLUDED.prompt, seed=EXCLUDED.seed""",
+                  (p.name, p.niche, p.prompt, p.youtube_id, p.insta_id, p.seed))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/empire-builder")
+async def empire_builder():
+    """Rapidly initializes 5 hyper-realistic personas."""
+    personas = [
+        {"name": "Aura", "niche": "AI & Tech", "seed": 555555, "dna": "26yo Japanese-Brazilian woman, sharp symmetrical jawline, hazel eyes, techwear, lab"},
+        {"name": "Kira", "niche": "Finance", "seed": 7721094, "dna": "24yo Indo-Australian woman, sun-kissed tanned skin, linen vest, coastal office"},
+        {"name": "Elara", "niche": "Luxury", "seed": 338812, "dna": "28yo Indo-French woman, chic bob, high cheekbones, silk blouse, Paris studio"},
+        {"name": "Maya", "niche": "Fitness", "seed": 992211, "dna": "25yo Scandinavian-Indian woman, athletic build, messy bun, gym, sunlight"},
+        {"name": "Luna", "niche": "Gaming", "seed": 445566, "dna": "22yo American-Indian woman, purple hair streaks, headset, neon gaming room"}
+    ]
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        for p in personas:
+            cur.execute("""INSERT INTO personas (name, niche, prompt, seed) VALUES (%s,%s,%s,%s) 
+                         ON CONFLICT (name) DO UPDATE SET niche=EXCLUDED.niche, prompt=EXCLUDED.prompt, seed=EXCLUDED.seed""", 
+                      (p['name'], p['niche'], p['dna'], p['seed']))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return {"status": "SUCCESS", "entities": personas}
+    except Exception as e:
+        return {"status": "ERROR", "error": str(e)}
 
 # --- Project & Pipeline Management ---
 @app.get("/api/projects")
 async def list_projects():
-    conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute("""SELECT p.*, per.name as persona_name 
-                 FROM projects p 
-                 JOIN personas per ON p.persona_id = per.id 
-                 ORDER BY p.created_at DESC""")
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
-    return rows
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""SELECT p.*, per.name as persona_name 
+                     FROM projects p 
+                     JOIN personas per ON p.persona_id = per.id 
+                     ORDER BY p.created_at DESC""")
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        return rows
+    except:
+        return []
 
 @app.post("/api/projects")
 async def create_project(data: ProjectCreate):
@@ -166,9 +202,8 @@ async def run_research(id: int):
     content = ""
     try:
         with DDGS() as ddgs:
-            # Triple-Scan Strategy
             res1 = ddgs.text(f"viral news trends {topic}", max_results=3)
-            res2 = ddgs.text(f"site:reddit.com {topic} controversy opinions", max_results=2)
+            res2 = ddgs.text(f"site:reddit.com {topic} opinions", max_results=2)
             combined = list(res1) + list(res2)
             for r in combined:
                 content += f"\n- {r['body']}"
@@ -184,8 +219,6 @@ async def run_research(id: int):
 @app.post("/api/projects/{id}/generate-script")
 async def run_scriptwriter(id: int):
     api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key: raise HTTPException(status_code=400, detail="Gemini Key Missing")
-    
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""SELECT p.topic, p.research_content, per.name, per.prompt 
@@ -204,7 +237,6 @@ async def run_scriptwriter(id: int):
         response = client.models.generate_content(model="gemini-1.5-pro", contents=prompt)
         script = response.text
     except:
-        # Fallback
         encoded = requests.utils.quote(prompt)
         script = requests.get(f"https://text.pollinations.ai/{encoded}?model=openai").text
 
@@ -222,10 +254,8 @@ async def run_visualizer(id: int):
                  FROM projects p JOIN personas per ON p.persona_id = per.id WHERE p.id = %s""", (id,))
     data = cur.fetchone()
     
-    # Realism Shell
     prefix = "Hyper-realistic raw photo, 8k UHD, shot on 35mm lens, f/1.8, "
     suffix = ", visible pores, natural skin grain, cinematic lighting, sharp focus, masterwork."
-    
     prompt = f"{prefix}{data[0]}, {data[2][:100]}{suffix}"
     encoded = requests.utils.quote(prompt)
     seed_param = f"&seed={data[1]}"
