@@ -69,6 +69,11 @@ class PersonaCreate(BaseModel):
     prompt: str
     seed: int
 
+class ProjectCreate(BaseModel):
+    persona_id: int
+    title: str
+    topic: str
+
 class ImageGenRequest(BaseModel):
     persona_name: str
     prompt_override: Optional[str] = None
@@ -78,7 +83,7 @@ class ImageGenRequest(BaseModel):
 
 @app.get("/api/health")
 async def health():
-    return {"status": "Clickbait Labs OS v3.0 - FORCE RESET ACTIVE"}
+    return {"status": "Clickbait Labs OS v3.4 - Project Engine Active"}
 
 @app.get("/api/personas")
 async def get_personas():
@@ -107,35 +112,109 @@ async def save_persona(p: PersonaCreate):
     conn.close()
     return {"status": "success"}
 
-@app.delete("/api/personas/{id}")
-async def delete_persona(id: int):
+@app.get("/api/projects")
+async def list_projects():
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("""SELECT p.*, per.name as persona_name 
+                 FROM projects p 
+                 JOIN personas per ON p.persona_id = per.id 
+                 ORDER BY p.created_at DESC""")
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
+
+@app.post("/api/projects")
+async def create_project(data: ProjectCreate):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("DELETE FROM personas WHERE id = %s", (id,))
+    cur.execute("INSERT INTO projects (persona_id, title, topic) VALUES (%s, %s, %s) RETURNING id",
+              (data.persona_id, data.title, data.topic))
+    project_id = cur.fetchone()[0]
     conn.commit()
     cur.close()
     conn.close()
-    return {"status": "deleted"}
+    return {"id": project_id}
+
+@app.get("/api/projects/{id}")
+async def get_project(id: int):
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT p.*, per.name as persona_name, per.prompt as persona_prompt, per.seed as persona_seed FROM projects p JOIN personas per ON p.persona_id = per.id WHERE p.id = %s", (id,))
+    project = cur.fetchone()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    cur.execute("SELECT * FROM renders WHERE project_id = %s", (id,))
+    renders = cur.fetchall()
+    
+    cur.close()
+    conn.close()
+    return {**project, "renders": renders}
+
+@app.post("/api/projects/{id}/research")
+async def run_research(id: int):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT topic FROM projects WHERE id = %s", (id,))
+    topic = cur.fetchone()[0]
+    
+    content = ""
+    try:
+        with DDGS() as ddgs:
+            res1 = ddgs.text(f"viral news trends {topic}", max_results=3)
+            res2 = ddgs.text(f"site:reddit.com {topic} opinions", max_results=2)
+            combined = list(res1) + list(res2)
+            for r in combined:
+                content += f"\n- {r['body']}"
+    except Exception as e:
+        content = f"Scan: {e}"
+
+    cur.execute("UPDATE projects SET research_content = %s, status = 'RESEARCHED' WHERE id = %s", (content, id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {"content": content}
+
+@app.post("/api/projects/{id}/generate-script")
+async def run_scriptwriter(id: int):
+    api_key = os.getenv("GEMINI_API_KEY")
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""SELECT p.topic, p.research_content, per.name, per.prompt 
+                 FROM projects p JOIN personas per ON p.persona_id = per.id WHERE p.id = %s""", (id,))
+    data = cur.fetchone()
+    
+    prompt = (
+        "ACT AS A $100M VIRAL CREATOR. USE TRIPLE-PASS TECHNIQUE.\n"
+        f"PERSONA: {data[2]}. TOPIC: {data[0]}. RESEARCH: {data[1]}.\n"
+        "GOAL: Write a high-retention script (Max 180 words). Output ONLY script."
+    )
+    
+    try:
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(model="gemini-1.5-pro", contents=prompt)
+        script = response.text
+    except:
+        encoded = requests.utils.quote(prompt)
+        script = requests.get(f"https://text.pollinations.ai/{encoded}?model=openai").text
+
+    cur.execute("UPDATE projects SET script = %s, status = 'SCRIPTED' WHERE id = %s", (script, id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {"script": script}
 
 @app.get("/api/factory-reset")
 async def factory_reset():
-    """Nuclear option: Clears and re-populates the entire roster including Valkyrie."""
     personas = [
         {"name": "Aura", "niche": "AI & Tech", "seed": 555555, "dna": "26yo Japanese-Brazilian woman, sharp jawline, techwear"},
         {"name": "Kira", "niche": "Finance", "seed": 7721094, "dna": "24yo Indo-Australian woman, sun-kissed, professional linen"},
-        {"name": "Elara", "niche": "Luxury", "seed": 338812, "dna": "28yo Indo-French woman, chic bob, silk blouse"},
-        {"name": "Maya", "niche": "Fitness", "seed": 992211, "dna": "25yo Scandinavian-Indian woman, athletic build"},
-        {"name": "Luna", "niche": "Gaming", "seed": 445566, "dna": "22yo American-Indian woman, headset, neon"},
-        {
-            "name": "Valkyrie", 
-            "niche": "Gaming", 
-            "seed": 9922881, 
-            "dna": "21yo Indo-Japanese pro-gamer, sharp jawline, purple LED reflections, raven-black hair with neon-purple streaks, messy high bun, matte-black esports jersey, white noise-canceling headphones, neon-lit gaming room background"
-        }
+        {"name": "Valkyrie", "niche": "Gaming", "seed": 9922881, "dna": "21yo Indo-Japanese pro-gamer, sharp jawline, purple LED reflections, messy bun, esports jersey, neon room background"}
     ]
     conn = get_db_connection()
     cur = conn.cursor()
-    # Nuclear clear
     cur.execute("DELETE FROM personas")
     for p in personas:
         cur.execute("INSERT INTO personas (name, niche, prompt, seed) VALUES (%s,%s,%s,%s)",
@@ -143,12 +222,12 @@ async def factory_reset():
     conn.commit()
     cur.close()
     conn.close()
-    return {"status": "FACTORY_RESET_SUCCESS", "new_count": len(personas)}
+    return {"status": "SUCCESS"}
 
 @app.post("/api/generate-image")
 async def generate_image(req: ImageGenRequest):
     prefix = "Hyper-realistic 8k UHD raw photo of a beautiful WOMAN, highly detailed feminine facial features, "
-    suffix = ", visible skin pores, natural skin texture, 35mm lens, f/1.8, cinematic studio lighting, sharp focus, masterpiece, no facial hair, no male traits."
+    suffix = ", visible skin pores, natural skin texture, 35mm lens, f/1.8, cinematic studio lighting, sharp focus, masterwork."
     full_prompt = f"{prefix}{req.prompt_override}{suffix}"
     encoded = requests.utils.quote(full_prompt)
     image_url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1792&model=flux&seed={req.seed}&nologo=true"
