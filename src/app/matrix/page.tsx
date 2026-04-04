@@ -101,45 +101,72 @@ export default function MatrixPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.1 }}
-                  className="bg-zinc-900/30 border border-white/5 rounded-3xl p-8 relative overflow-hidden group hover:border-white/10 transition-colors"
+                  className="bg-zinc-900/30 border border-white/5 rounded-3xl overflow-hidden group hover:border-white/10 transition-all flex flex-col h-full shadow-2xl"
                 >
-                  <div className="relative z-10 space-y-6">
+                  {/* Avatar Preview */}
+                  <div className="aspect-[4/5] w-full relative bg-black overflow-hidden border-b border-white/5">
+                    <img 
+                      src={`https://image.pollinations.ai/prompt/${encodeURIComponent("Hyper-realistic close up professional portrait, " + persona.prompt + ", visible skin pores, 8k UHD, cinematic lighting")}&width=512&height=640&seed=${persona.seed}&model=flux&nologo=true`}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-80 group-hover:opacity-100"
+                      alt={persona.name}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-transparent to-transparent" />
+                    <div className="absolute top-4 left-4 flex gap-2">
+                       <span className="px-2 py-1 bg-black/40 backdrop-blur-md border border-white/10 text-emerald-500 text-[8px] font-black uppercase tracking-widest rounded-md">
+                          Live Identity
+                       </span>
+                       <span className="px-2 py-1 bg-black/40 backdrop-blur-md border border-white/10 text-blue-400 text-[8px] font-black uppercase tracking-widest rounded-md">
+                          Seed Locked
+                       </span>
+                    </div>
+                  </div>
+
+                  <div className="p-8 space-y-6 relative z-10 flex-1 flex flex-col">
                     <div className="flex justify-between items-start">
-                      <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center text-zinc-400">
-                        <Users size={28} />
+                      <div>
+                        <h3 className="text-2xl font-bold tracking-tight text-white">{persona.name}</h3>
+                        <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">{persona.niche}</p>
                       </div>
-                      <div className="flex gap-2">
-                        <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-[8px] font-black uppercase tracking-widest rounded-full border border-emerald-500/20">
-                          Active
-                        </span>
-                        <button className="text-zinc-600 hover:text-white transition-colors">
-                          <MoreVertical size={18} />
-                        </button>
-                      </div>
+                      <button className="text-zinc-600 hover:text-white transition-colors">
+                        <MoreVertical size={18} />
+                      </button>
                     </div>
 
-                    <div>
-                      <h3 className="text-2xl font-bold tracking-tight">{persona.name}</h3>
-                      <p className="text-zinc-500 text-xs font-medium uppercase tracking-[0.2em] mt-1">{persona.niche}</p>
+                    {/* Vibe & Voice Intelligence */}
+                    <div className="grid grid-cols-2 gap-4">
+                       <div className="space-y-1">
+                          <p className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">Performance Vibe</p>
+                          <p className="text-[10px] font-bold text-zinc-300">
+                             {persona.niche === 'AI & Tech' ? 'Sophisticated / Neutral' : 
+                              persona.niche === 'Finance' ? 'Aggressive / Authority' : 'Relatable / High-Energy'}
+                          </p>
+                       </div>
+                       <div className="space-y-1">
+                          <p className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">Voice Blueprint</p>
+                          <p className="text-[10px] font-bold text-zinc-300">Deep / Vocal Fry / 140bpm</p>
+                       </div>
                     </div>
 
-                    <p className="text-sm text-zinc-400 font-display italic line-clamp-2 leading-relaxed">
-                      {persona.prompt}
+                    <p className="text-xs text-zinc-400 font-medium italic line-clamp-2 leading-relaxed opacity-60 flex-1">
+                      "{persona.prompt}"
                     </p>
 
-                    <div className="pt-6 border-t border-white/5 flex items-center gap-6">
-                      <div className="flex items-center gap-2 text-zinc-500">
-                        <Video size={16} />
-                        <span className="text-[10px] font-bold">{persona.youtube_id || 'N/A'}</span>
+                    <div className="pt-6 border-t border-white/5 flex items-center justify-between mt-auto">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1.5 text-zinc-500">
+                          <Video size={14} />
+                          <span className="text-[10px] font-bold uppercase tracking-tight">{persona.youtube_id || 'unlinked'}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-zinc-500">
+                          <Camera size={14} />
+                          <span className="text-[10px] font-bold uppercase tracking-tight">{persona.insta_id || 'unlinked'}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 text-zinc-500">
-                        <Camera size={16} />
-                        <span className="text-[10px] font-bold">{persona.insta_id || 'N/A'}</span>
+                      <div className="text-[8px] font-mono text-zinc-700 bg-white/5 px-2 py-1 rounded border border-white/5">
+                        S_{persona.seed}
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
                 </motion.div>
               ))}
             </div>

@@ -15,9 +15,8 @@ load_dotenv()
 
 app = FastAPI()
 
-# --- Vercel Postgres Connection ---
+# --- Database Connection ---
 def get_db_connection():
-    # Try multiple common env variable names for maximum compatibility
     url = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL")
     if not url:
         raise Exception("Database Connection String Missing")
@@ -29,30 +28,19 @@ def init_cloud_db():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        # 1. Create base table
         cur.execute('''CREATE TABLE IF NOT EXISTS personas
                      (id SERIAL PRIMARY KEY, 
-                      name TEXT NOT NULL, 
+                      name TEXT NOT NULL UNIQUE, 
                       niche TEXT, 
                       prompt TEXT,
                       youtube_id TEXT,
-                      insta_id TEXT)''')
+                      insta_id TEXT,
+                      seed BIGINT DEFAULT 555555)''')
         
-        # 2. Self-Healing: Check for seed column
         cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name='personas' AND column_name='seed'")
         if not cur.fetchone():
-            print("Fixing Database: Adding 'seed' column...")
             cur.execute("ALTER TABLE personas ADD COLUMN seed BIGINT DEFAULT 555555")
-
-        # 3. Self-Healing: Add unique constraint on name to prevent duplicates
-        cur.execute("""
-            DO $$ BEGIN
-                ALTER TABLE personas ADD CONSTRAINT personas_name_unique UNIQUE (name);
-            EXCEPTION WHEN duplicate_table THEN NULL;
-            END $$;
-        """)
-
-        # 4. Create calendar
+        
         cur.execute('''CREATE TABLE IF NOT EXISTS content_calendar
                      (id SERIAL PRIMARY KEY, 
                       persona_id INTEGER REFERENCES personas(id), 
@@ -66,58 +54,6 @@ def init_cloud_db():
         return "DATABASE_READY"
     except Exception as e:
         return f"DATABASE_ERROR: {str(e)}"
-
-@app.get("/api/empire-builder")
-async def empire_builder():
-    """Rapidly initializes 5 hyper-realistic personas with anatomical DNA."""
-    personas_to_create = [
-        {"name": "Aura", "niche": "AI & Tech", "seed": 555555, "dna": "26yo Japanese-Brazilian woman, sharp symmetrical jawline, hazel eyes, detailed skin pores, wearing black techwear, cyberpunk laboratory background, volumetric lighting"},
-        {"name": "Kira", "niche": "Finance", "seed": 7721094, "dna": "24yo Indo-Australian woman, sun-kissed tanned skin, light brown eyes, natural wavy hair, professional linen vest, coastal Sydney office background, golden hour lighting"},
-        {"name": "Elara", "niche": "Luxury", "seed": 338812, "dna": "28yo Indo-French woman, chic bob haircut, high cheekbones, almond eyes, silk blouse, high-end Parisian studio, soft moody shadows, elegant posture"},
-        {"name": "Maya", "niche": "Fitness", "seed": 992211, "dna": "25yo Scandinavian-Indian woman, athletic build, sweat beads on forehead, messy bun, minimalist home gym, bright morning sunlight, photorealistic skin grain"},
-        {"name": "Luna", "niche": "Gaming", "seed": 445566, "dna": "22yo American-Indian woman, dyed purple hair streaks, oversized headset, gaming jersey, neon-lit bedroom, motion blur background, expressive face"}
-    ]
-    
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-
-        # Remove any duplicates first (keep only the lowest id per name)
-        cur.execute("""
-            DELETE FROM personas
-            WHERE id NOT IN (
-                SELECT MIN(id) FROM personas GROUP BY name
-            )
-        """)
-
-        for p in personas_to_create:
-            cur.execute("""
-                INSERT INTO personas (name, niche, prompt, seed)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (name) DO UPDATE SET
-                    niche = EXCLUDED.niche,
-                    prompt = EXCLUDED.prompt,
-                    seed = EXCLUDED.seed
-            """, (p['name'], p['niche'], p['dna'], p['seed']))
-
-        conn.commit()
-        cur.close()
-        conn.close()
-        return {"status": "SUCCESS", "message": "Empire Synchronized", "entities": personas_to_create}
-    except Exception as e:
-        # Return partial success even if DB fails so UI doesn't show 500 error
-        return {
-            "status": "PARTIAL_OFFLINE", 
-            "error": str(e),
-            "message": "Database disconnected. Using demo mode.",
-            "entities": personas_to_create
-        }
-
-# Try to init on startup
-try:
-    init_cloud_db()
-except Exception as e:
-    print(f"DB Init Error (Normal if POSTGRES_URL not set yet): {e}")
 
 # --- Models ---
 class ScriptRequest(BaseModel):
@@ -136,8 +72,8 @@ class ImageRequest(BaseModel):
 @app.get("/api/system/status")
 async def system_status():
     return {
-        "engine": "CLOUD_V11_REAL",
-        "flux_download": {"percent": 100, "status": "FREE_CLOUD_GPU_ACTIVE"},
+        "engine": "CLOUD_V24_STRATEGIC",
+        "status": "ONLINE",
         "gpu_health": "OPTIMIZED"
     }
 
@@ -149,82 +85,107 @@ async def research(request: Request):
     content = ""
     try:
         with DDGS() as ddgs:
-            results = ddgs.text(f"trending facts about {topic}", max_results=3)
-            for r in results:
+            # Triple-Scan Strategy
+            logs.append("Phase 1: Scanning Global Tech/Viral News...")
+            res1 = ddgs.text(f"viral news trends {topic}", max_results=3)
+            
+            logs.append("Phase 2: Analyzing Community Sentiment (Reddit/X)...")
+            res2 = ddgs.text(f"site:reddit.com {topic} opinions controversy", max_results=2)
+            
+            logs.append("Phase 3: Extracting Authoritative Data/Facts...")
+            res3 = ddgs.text(f"{topic} statistics data points explained", max_results=2)
+            
+            combined = list(res1) + list(res2) + list(res3)
+            for r in combined:
                 content += f"\n- {r['body']}"
-                logs.append(f"Retrieved cloud packet for {topic}")
+            
+            logs.append("Deep synthesis complete. Intelligence package ready.")
     except Exception as e:
-        content = "Cloud research active (Safe Mode)."
-        logs.append(f"Search: {str(e)}")
+        content = "Standard scan active."
+        logs.append(f"Scan status: {str(e)}")
     return {"content": content, "logs": logs}
 
 @app.post("/api/generate-script")
 async def generate_script(req: ScriptRequest):
+    # TRIPLE-PASS Instruction
     prompt = (
-        f"You are a legendary viral video scriptwriter. Write a punchy short-form video script. "
-        f"TOPIC: {req.topic}. NICHE: {req.niche}. STYLE: {req.style}. "
-        f"Structure: HOOK (1 line that stops the scroll), BUILD (2-3 lines of tension), "
-        f"VALUE (the insight or reveal), PATTERN INTERRUPT (unexpected twist), CTA (call to action). "
-        f"Max 150 words. Output only the script, no labels."
+        "ACT AS A $100M DIRECT-RESPONSE MARKETER AND VIRAL CREATOR. "
+        "YOUR GOAL IS 100% RETENTION. USE TRIPLE-PASS TECHNIQUE:\n"
+        "PASS 1: STRUCTURE - Create a high-tension narrative arc.\n"
+        "PASS 2: PSYCHOLOGY - Inject Curiosity Gaps, Pattern Interrupts, and Status Signaling.\n"
+        "PASS 3: POLISH - Write for 'MrBeast-Style' pacing and clarity.\n\n"
+        f"TOPIC: {req.topic}. NICHE: {req.niche}. STYLE: {req.style}.\n"
+        "Output ONLY the final script text. Max 180 words."
     )
 
-    # 1. Try Gemini if key available and not exhausted
     api_key = req.api_key or os.getenv("GEMINI_API_KEY")
     if api_key:
         try:
             client = genai.Client(api_key=api_key)
-            response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
-            if response.text:
-                return {"script": response.text}
+            response = client.models.generate_content(model="gemini-1.5-pro", contents=prompt)
+            return {"script": response.text}
         except Exception:
-            pass  # Fall through to free fallback
+            pass
 
-    # 2. Fallback: Pollinations AI (free, no key required)
+    # Fallback to high-speed text
     try:
-        encoded_prompt = requests.utils.quote(prompt)
-        resp = requests.get(
-            f"https://text.pollinations.ai/{encoded_prompt}?model=openai&seed=42",
-            timeout=30
-        )
-        if resp.status_code == 200 and resp.text:
-            return {"script": resp.text}
-        return {"script": None, "error": f"Pollinations returned {resp.status_code}"}
+        encoded = requests.utils.quote(prompt)
+        resp = requests.get(f"https://text.pollinations.ai/{encoded}?model=openai")
+        return {"script": resp.text}
     except Exception as e:
         return {"script": None, "error": str(e)}
 
 @app.post("/api/generate-image")
 async def generate_image(req: ImageRequest):
     """Generates a hyper-realistic human portrait using Pro Photography parameters."""
-    api_key = os.getenv("POLLINATIONS_API_KEY")
+    # The "Realism Shell"
+    prefix = "Hyper-realistic raw photo, 8k UHD, shot on 35mm lens, f/1.8, "
+    suffix = ", highly detailed skin textures, visible pores, natural skin grain, cinematic lighting, extremely sharp focus, no airbrushing, professional color grading, masterwork."
     
-    # The "Realism Shell" - Forces the AI to stop airbrushing and use real lens physics
-    realism_prefix = "Hyper-realistic raw photo, 8k UHD, shot on 35mm lens, f/1.8, "
-    realism_suffix = ", highly detailed skin textures, visible pores, natural skin grain, cinematic lighting, extremely sharp focus, no airbrushing, professional color grading, masterwork."
-    
-    full_prompt = f"{realism_prefix}{req.prompt}{realism_suffix}"
-    encoded_prompt = requests.utils.quote(full_prompt)
+    full_prompt = f"{prefix}{req.prompt}{suffix}"
+    encoded = requests.utils.quote(full_prompt)
     seed_param = f"&seed={req.seed}" if req.seed else ""
     
-    # Using the standard image endpoint with the key in headers for priority
-    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1792&model=flux{seed_param}&nologo=true&enhance=false"
+    image_url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1792&model=flux{seed_param}&nologo=true&enhance=false"
+    return {"url": image_url}
+
+@app.get("/api/empire-builder")
+async def empire_builder():
+    """Rapidly initializes 5 hyper-realistic personas with anatomical DNA."""
+    personas = [
+        {"name": "Aura", "niche": "AI & Tech", "seed": 555555, "dna": "26yo Japanese-Brazilian woman, sharp symmetrical jawline, hazel eyes, techwear, lab"},
+        {"name": "Kira", "niche": "Finance", "seed": 7721094, "dna": "24yo Indo-Australian woman, sun-kissed tanned skin, linen vest, coastal office"},
+        {"name": "Elara", "niche": "Luxury", "seed": 338812, "dna": "28yo Indo-French woman, chic bob, high cheekbones, silk blouse, Paris studio"},
+        {"name": "Maya", "niche": "Fitness", "seed": 992211, "dna": "25yo Scandinavian-Indian woman, athletic build, messy bun, gym, sunlight"},
+        {"name": "Luna", "niche": "Gaming", "seed": 445566, "dna": "22yo American-Indian woman, purple hair streaks, headset, neon gaming room"}
+    ]
     
-    if api_key:
-        return {"url": image_url, "mode": "PRO_REALISM_ACTIVE"}
-    else:
-        return {"url": image_url, "mode": "FREE_REALISM_ACTIVE"}
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        for p in personas:
+            cur.execute("""INSERT INTO personas (name, niche, prompt, seed) VALUES (%s,%s,%s,%s) 
+                         ON CONFLICT (name) DO UPDATE SET niche=EXCLUDED.niche, prompt=EXCLUDED.prompt, seed=EXCLUDED.seed""", 
+                      (p['name'], p['niche'], p['dna'], p['seed']))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return {"status": "SUCCESS", "entities": personas}
+    except Exception as e:
+        return {"status": "ERROR", "error": str(e), "entities": personas}
 
 @app.get("/api/personas")
 async def list_personas():
     try:
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT * FROM personas")
+        cur.execute("SELECT * FROM personas ORDER BY id DESC")
         rows = cur.fetchall()
         cur.close()
         conn.close()
         return rows
     except:
-        return [{"id": 1, "name": "Nova (Demo)", "niche": "AI", "prompt": "..."}]
+        return []
 
 @app.post("/api/personas")
 async def create_persona(req: Request):
@@ -232,7 +193,7 @@ async def create_persona(req: Request):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("INSERT INTO personas (name, niche, prompt, youtube_id, insta_id, seed) VALUES (%s,%s,%s,%s,%s,%s)",
+        cur.execute("INSERT INTO personas (name, niche, prompt, youtube_id, insta_id, seed) VALUES (%s,%s,%s,%s,%s,%s)", 
                   (p.get('name'), p.get('niche'), p.get('prompt'), p.get('youtube_id'), p.get('insta_id'), p.get('seed')))
         conn.commit()
         cur.close()
@@ -243,74 +204,5 @@ async def create_persona(req: Request):
 
 @app.get("/api/db-sync")
 async def db_sync():
-    result = init_cloud_db()
-    return {"status": result}
-
-@app.get("/api/calendar")
-async def get_calendar():
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            SELECT cc.id, cc.topic, cc.scheduled_time, cc.status, p.name as persona
-            FROM content_calendar cc
-            LEFT JOIN personas p ON cc.persona_id = p.id
-            ORDER BY cc.scheduled_time ASC
-        """)
-        rows = cur.fetchall()
-        cur.close()
-        conn.close()
-        return list(rows)
-    except Exception as e:
-        return []
-
-@app.post("/api/calendar")
-async def create_calendar_event(req: Request):
-    data = await req.json()
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute(
-            "INSERT INTO content_calendar (persona_id, topic, scheduled_time, status) VALUES (%s,%s,%s,%s)",
-            (data.get('persona_id'), data.get('topic'), data.get('scheduled_time'), data.get('status', 'QUEUED'))
-        )
-        conn.commit()
-        cur.close()
-        conn.close()
-        return {"status": "success"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/generate-thumbnail")
-async def generate_thumbnail(req: Request):
-    data = await req.json()
-    script = data.get("script", "")
-    persona = data.get("persona", "")
-
-    thumb_prompt_request = (
-        f"Create a YouTube thumbnail image generation prompt for influencer '{persona}'. "
-        f"Script excerpt: '{script[:200]}'. "
-        f"Output ONLY the image prompt, max 80 words, no explanation."
-    )
-
-    # 1. Try Gemini
-    api_key = data.get("api_key") or os.getenv("GEMINI_API_KEY")
-    if api_key:
-        try:
-            client = genai.Client(api_key=api_key)
-            response = client.models.generate_content(model="gemini-2.0-flash", contents=thumb_prompt_request)
-            if response.text:
-                return {"prompt": response.text.strip()}
-        except Exception:
-            pass
-
-    # 2. Fallback: Pollinations text
-    try:
-        encoded = requests.utils.quote(thumb_prompt_request)
-        resp = requests.get(f"https://text.pollinations.ai/{encoded}?model=openai&seed=99", timeout=20)
-        if resp.status_code == 200 and resp.text:
-            return {"prompt": resp.text.strip()}
-    except Exception:
-        pass
-
-    return {"prompt": f"Cinematic portrait of {persona}, YouTube thumbnail style, bold typography, high contrast, viral energy"}
+    status = init_cloud_db()
+    return {"status": status}

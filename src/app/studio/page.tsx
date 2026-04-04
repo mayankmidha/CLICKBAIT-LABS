@@ -202,6 +202,17 @@ export default function StudioPage() {
                   </div>
                 )}
 
+                {/* Delivery Vibe */}
+                <div className="bg-zinc-900/40 border border-white/5 rounded-2xl p-6 space-y-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Delivery Vibe</p>
+                  <select className="w-full bg-black/50 border border-white/5 rounded-xl p-4 text-xs font-bold appearance-none hover:border-white/20 transition-all text-white">
+                    <option>Aggressive & Urgent (Beast-Style)</option>
+                    <option>Sophisticated & Tech-Minimal</option>
+                    <option>Deep & Philosophical</option>
+                    <option>High-Status & Luxury</option>
+                  </select>
+                </div>
+
                 {/* Generate */}
                 {loading ? (
                   <div className="space-y-3">
