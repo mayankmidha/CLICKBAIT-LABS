@@ -76,6 +76,10 @@ class PersonaCreate(BaseModel):
 
 # --- API Endpoints ---
 
+@app.get("/api/health")
+async def health():
+    return {"status": "Clickbait Labs OS v2.5 Online - Valkyrie Engine Active"}
+
 @app.get("/api/personas")
 async def get_personas():
     try:
