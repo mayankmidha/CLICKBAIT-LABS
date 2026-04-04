@@ -107,7 +107,23 @@ export default function ProjectWorkspace() {
     }
   }
 
-  if (isLoading) return null
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <Loader2 className="animate-spin text-blue-500" size={48} />
+      </div>
+    )
+  }
+
+  if (!project) {
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center gap-6">
+        <AlertCircle className="text-red-500" size={64} />
+        <h2 className="text-2xl font-bold tracking-tighter uppercase tracking-[0.2em]">Project Signal Lost</h2>
+        <button onClick={() => router.push('/')} className="px-8 py-4 bg-white text-black rounded-xl text-xs font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">Back to Factory</button>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-black text-white flex">
