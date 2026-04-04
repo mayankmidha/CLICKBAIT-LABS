@@ -1,1 +1,8 @@
-node_modules/\n.next/\n.env\n__pycache__/\n*.db\n.DS_Store
+node_modules/
+.next/
+.env
+.env.local
+__pycache__/
+*.db
+.DS_Store
+*.pyc
