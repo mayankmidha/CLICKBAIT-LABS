@@ -94,7 +94,11 @@ export default function StudioPage() {
         const res = await fetch('/api/generate-video', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ persona_name: persona.name, script }),
+          body: JSON.stringify({ 
+            persona_name: persona.name, 
+            script,
+            image_url: mode === 'video' ? mediaUrl : null // Only if we already have a portrait
+          }),
         })
         const data = await res.json()
         if (data.error) throw new Error(data.error)
