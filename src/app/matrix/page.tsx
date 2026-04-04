@@ -74,9 +74,14 @@ export default function MatrixPage() {
 
   async function handleFactoryInit() {
     setIsSyncing(true)
-    await fetch('/api/empire-builder')
-    mutate('/api/personas')
-    setTimeout(() => setIsSyncing(false), 1000)
+    try {
+      await fetch('/api/factory-reset')
+      mutate('/api/personas')
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setTimeout(() => setIsSyncing(false), 1000)
+    }
   }
 
   return (
@@ -92,7 +97,7 @@ export default function MatrixPage() {
                 <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-zinc-400">
                   Talent Roster
                 </span>
-                <span className="px-2 py-1 bg-blue-500/10 border border-blue-500/20 rounded text-[8px] font-black text-blue-400 uppercase">v2.5 - Valkyrie Active</span>
+                <span className="px-2 py-1 bg-red-500/10 border border-red-500/20 rounded text-[8px] font-black text-red-400 uppercase">v3.0 - Nuclear Reset Ready</span>
               </div>
               <h1 className="text-6xl font-bold tracking-tighter leading-[0.9]">
                 Identity <span className="text-zinc-500 italic font-light">Matrix.</span>
