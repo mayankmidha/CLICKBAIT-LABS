@@ -5,12 +5,11 @@ import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { 
   LayoutDashboard, 
-  PenTool, 
-  Clapperboard, 
   Users, 
   BarChart3, 
   Settings,
-  Zap
+  Zap,
+  FolderKanban
 } from 'lucide-react'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
@@ -20,10 +19,8 @@ function cn(...inputs: ClassValue[]) {
 }
 
 const navItems = [
-  { name: 'Overview', href: '/', icon: LayoutDashboard },
-  { name: "Writer's Room", href: '/writer', icon: PenTool },
-  { name: 'Studio', href: '/studio', icon: Clapperboard },
-  { name: 'Persona Matrix', href: '/matrix', icon: Users },
+  { name: 'Factory Floor', href: '/', icon: LayoutDashboard },
+  { name: 'Talent Agency', href: '/matrix', icon: Users },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
 ]
 
@@ -40,6 +37,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-2">
+        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-700 mb-4 px-4">Navigation</p>
         {navItems.map((item) => {
           const isActive = pathname === item.href
           return (

@@ -10,24 +10,25 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 import requests
+import datetime
 
 load_dotenv()
 
 app = FastAPI()
 
-# --- Database Connection ---
+# --- Database Core ---
 def get_db_connection():
     url = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL")
     if not url:
-        raise Exception("Database Connection String Missing")
-    conn = psycopg2.connect(url, sslmode='require')
-    return conn
+        raise Exception("Database Connection Missing")
+    return psycopg2.connect(url, sslmode='require')
 
-# --- Initialize Database ---
-def init_cloud_db():
+def init_db():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        # 1. Personas (The Identity)
         cur.execute('''CREATE TABLE IF NOT EXISTS personas
                      (id SERIAL PRIMARY KEY, 
                       name TEXT NOT NULL UNIQUE, 
@@ -37,179 +38,202 @@ def init_cloud_db():
                       insta_id TEXT,
                       seed BIGINT DEFAULT 555555)''')
         
-        cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name='personas' AND column_name='seed'")
-        if not cur.fetchone():
-            cur.execute("ALTER TABLE personas ADD COLUMN seed BIGINT DEFAULT 555555")
-        
-        cur.execute('''CREATE TABLE IF NOT EXISTS content_calendar
+        # 2. Projects (The Content Engine)
+        cur.execute('''CREATE TABLE IF NOT EXISTS projects
                      (id SERIAL PRIMARY KEY, 
                       persona_id INTEGER REFERENCES personas(id), 
+                      title TEXT, 
                       topic TEXT, 
-                      scheduled_time TEXT, 
-                      status TEXT DEFAULT 'QUEUED')''')
+                      research_content TEXT,
+                      script TEXT,
+                      status TEXT DEFAULT 'DRAFT',
+                      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+        
+        # 3. Renders (The Assets)
+        cur.execute('''CREATE TABLE IF NOT EXISTS renders
+                     (id SERIAL PRIMARY KEY, 
+                      project_id INTEGER REFERENCES projects(id), 
+                      url TEXT, 
+                      type TEXT, 
+                      status TEXT DEFAULT 'READY',
+                      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
         
         conn.commit()
         cur.close()
         conn.close()
-        return "DATABASE_READY"
+        return True
     except Exception as e:
-        return f"DATABASE_ERROR: {str(e)}"
+        print(f"DB Error: {e}")
+        return False
+
+# Initialize on boot
+init_db()
 
 # --- Models ---
-class ScriptRequest(BaseModel):
+class ProjectCreate(BaseModel):
+    persona_id: int
+    title: str
     topic: str
-    niche: str
-    style: str
-    persona_name: Optional[str] = None
-    persona_dna: Optional[str] = None
-    api_key: Optional[str] = None
 
-class ImageRequest(BaseModel):
-    prompt: str
-    persona_name: str
-    seed: Optional[int] = None
+class ScriptUpdate(BaseModel):
+    script: str
+
+class ImageGenRequest(BaseModel):
+    project_id: int
+    prompt_override: Optional[str] = None
 
 # --- API Endpoints ---
 
-@app.get("/api/system/status")
-async def system_status():
-    return {
-        "engine": "CLOUD_V24_STRATEGIC",
-        "status": "ONLINE",
-        "gpu_health": "OPTIMIZED"
-    }
+@app.get("/api/health")
+async def health():
+    return {"status": "Clickbait Labs OS v2.0 Online"}
 
-@app.post("/api/research")
-async def research(request: Request):
-    data = await request.json()
-    topic = data.get("topic")
-    logs = []
+# --- Persona Management ---
+@app.get("/api/personas")
+async def get_personas():
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT * FROM personas ORDER BY name ASC")
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
+
+@app.post("/api/personas")
+async def create_persona(p: dict):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""INSERT INTO personas (name, niche, prompt, seed) 
+                 VALUES (%s, %s, %s, %s) ON CONFLICT (name) DO UPDATE 
+                 SET niche=EXCLUDED.niche, prompt=EXCLUDED.prompt, seed=EXCLUDED.seed""",
+              (p['name'], p['niche'], p['prompt'], p.get('seed', 555555)))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {"status": "success"}
+
+# --- Project & Pipeline Management ---
+@app.get("/api/projects")
+async def list_projects():
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("""SELECT p.*, per.name as persona_name 
+                 FROM projects p 
+                 JOIN personas per ON p.persona_id = per.id 
+                 ORDER BY p.created_at DESC""")
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
+
+@app.post("/api/projects")
+async def create_project(data: ProjectCreate):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO projects (persona_id, title, topic) VALUES (%s, %s, %s) RETURNING id",
+              (data.persona_id, data.title, data.topic))
+    project_id = cur.fetchone()[0]
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {"id": project_id}
+
+@app.get("/api/projects/{id}")
+async def get_project(id: int):
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT p.*, per.name as persona_name, per.prompt as persona_prompt, per.seed as persona_seed FROM projects p JOIN personas per ON p.persona_id = per.id WHERE p.id = %s", (id,))
+    project = cur.fetchone()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    cur.execute("SELECT * FROM renders WHERE project_id = %s", (id,))
+    renders = cur.fetchall()
+    
+    cur.close()
+    conn.close()
+    return {**project, "renders": renders}
+
+# --- Core Intelligence Engines ---
+
+@app.post("/api/projects/{id}/research")
+async def run_research(id: int):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT topic FROM projects WHERE id = %s", (id,))
+    topic = cur.fetchone()[0]
+    
     content = ""
     try:
         with DDGS() as ddgs:
             # Triple-Scan Strategy
-            logs.append("Phase 1: Scanning Global Tech/Viral News...")
             res1 = ddgs.text(f"viral news trends {topic}", max_results=3)
-            
-            logs.append("Phase 2: Analyzing Community Sentiment (Reddit/X)...")
-            res2 = ddgs.text(f"site:reddit.com {topic} opinions controversy", max_results=2)
-            
-            logs.append("Phase 3: Extracting Authoritative Data/Facts...")
-            res3 = ddgs.text(f"{topic} statistics data points explained", max_results=2)
-            
-            combined = list(res1) + list(res2) + list(res3)
+            res2 = ddgs.text(f"site:reddit.com {topic} controversy opinions", max_results=2)
+            combined = list(res1) + list(res2)
             for r in combined:
                 content += f"\n- {r['body']}"
-            
-            logs.append("Deep synthesis complete. Intelligence package ready.")
     except Exception as e:
-        content = "Standard scan active."
-        logs.append(f"Scan status: {str(e)}")
-    return {"content": content, "logs": logs}
+        content = f"Research completed with errors: {e}"
 
-@app.post("/api/generate-script")
-async def generate_script(req: ScriptRequest):
-    # TRIPLE-PASS Instruction with Persona Context
-    persona_context = f"PERSONA NAME: {req.persona_name}. PERSONA DNA: {req.persona_dna}." if req.persona_name else ""
+    cur.execute("UPDATE projects SET research_content = %s, status = 'RESEARCHED' WHERE id = %s", (content, id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {"content": content}
+
+@app.post("/api/projects/{id}/generate-script")
+async def run_scriptwriter(id: int):
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key: raise HTTPException(status_code=400, detail="Gemini Key Missing")
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""SELECT p.topic, p.research_content, per.name, per.prompt 
+                 FROM projects p JOIN personas per ON p.persona_id = per.id WHERE p.id = %s""", (id,))
+    data = cur.fetchone()
     
     prompt = (
-        "ACT AS A $100M DIRECT-RESPONSE MARKETER AND VIRAL CREATOR. "
-        "YOUR GOAL IS 100% RETENTION. USE TRIPLE-PASS TECHNIQUE:\n"
-        "PASS 1: STRUCTURE - Create a high-tension narrative arc.\n"
-        "PASS 2: PSYCHOLOGY - Inject Curiosity Gaps, Pattern Interrupts, and Status Signaling.\n"
-        "PASS 3: POLISH - Write for 'MrBeast-Style' pacing and clarity.\n\n"
-        f"{persona_context}\n"
-        f"TOPIC: {req.topic}. NICHE: {req.niche}. STYLE: {req.style}.\n"
-        "INSTRUCTION: Adopt the specific voice, background, and ethnicity of the persona. "
-        "Ensure the script sounds like THIS person speaking, not a generic AI. "
-        "Output ONLY the final script text. Max 180 words."
+        "ACT AS A $100M VIRAL CREATOR. USE TRIPLE-PASS TECHNIQUE.\n"
+        f"PERSONA: {data[2]}. DNA: {data[3]}.\n"
+        f"TOPIC: {data[0]}. RESEARCH: {data[1]}.\n"
+        "GOAL: Write a high-retention script (Max 180 words). Output ONLY the script."
     )
-
-    api_key = req.api_key or os.getenv("GEMINI_API_KEY")
-    if api_key:
-        try:
-            client = genai.Client(api_key=api_key)
-            response = client.models.generate_content(model="gemini-1.5-pro", contents=prompt)
-            return {"script": response.text}
-        except Exception:
-            pass
-
-    # Fallback to high-speed text
-    try:
-        encoded = requests.utils.quote(prompt)
-        resp = requests.get(f"https://text.pollinations.ai/{encoded}?model=openai")
-        return {"script": resp.text}
-    except Exception as e:
-        return {"script": None, "error": str(e)}
-
-@app.post("/api/generate-image")
-async def generate_image(req: ImageRequest):
-    """Generates a hyper-realistic human portrait using Pro Photography parameters."""
-    # The "Realism Shell"
-    prefix = "Hyper-realistic raw photo, 8k UHD, shot on 35mm lens, f/1.8, "
-    suffix = ", highly detailed skin textures, visible pores, natural skin grain, cinematic lighting, extremely sharp focus, no airbrushing, professional color grading, masterwork."
-    
-    full_prompt = f"{prefix}{req.prompt}{suffix}"
-    encoded = requests.utils.quote(full_prompt)
-    seed_param = f"&seed={req.seed}" if req.seed else ""
-    
-    image_url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1792&model=flux{seed_param}&nologo=true&enhance=false"
-    return {"url": image_url}
-
-@app.get("/api/empire-builder")
-async def empire_builder():
-    """Rapidly initializes 5 hyper-realistic personas with anatomical DNA."""
-    personas = [
-        {"name": "Aura", "niche": "AI & Tech", "seed": 555555, "dna": "26yo Japanese-Brazilian woman, sharp symmetrical jawline, hazel eyes, techwear, lab"},
-        {"name": "Kira", "niche": "Finance", "seed": 7721094, "dna": "24yo Indo-Australian woman, sun-kissed tanned skin, linen vest, coastal office"},
-        {"name": "Elara", "niche": "Luxury", "seed": 338812, "dna": "28yo Indo-French woman, chic bob, high cheekbones, silk blouse, Paris studio"},
-        {"name": "Maya", "niche": "Fitness", "seed": 992211, "dna": "25yo Scandinavian-Indian woman, athletic build, messy bun, gym, sunlight"},
-        {"name": "Luna", "niche": "Gaming", "seed": 445566, "dna": "22yo American-Indian woman, purple hair streaks, headset, neon gaming room"}
-    ]
     
     try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        for p in personas:
-            cur.execute("""INSERT INTO personas (name, niche, prompt, seed) VALUES (%s,%s,%s,%s) 
-                         ON CONFLICT (name) DO UPDATE SET niche=EXCLUDED.niche, prompt=EXCLUDED.prompt, seed=EXCLUDED.seed""", 
-                      (p['name'], p['niche'], p['dna'], p['seed']))
-        conn.commit()
-        cur.close()
-        conn.close()
-        return {"status": "SUCCESS", "entities": personas}
-    except Exception as e:
-        return {"status": "ERROR", "error": str(e), "entities": personas}
-
-@app.get("/api/personas")
-async def list_personas():
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT * FROM personas ORDER BY id DESC")
-        rows = cur.fetchall()
-        cur.close()
-        conn.close()
-        return rows
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(model="gemini-1.5-pro", contents=prompt)
+        script = response.text
     except:
-        return []
+        # Fallback
+        encoded = requests.utils.quote(prompt)
+        script = requests.get(f"https://text.pollinations.ai/{encoded}?model=openai").text
 
-@app.post("/api/personas")
-async def create_persona(req: Request):
-    p = await req.json()
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("INSERT INTO personas (name, niche, prompt, youtube_id, insta_id, seed) VALUES (%s,%s,%s,%s,%s,%s)", 
-                  (p.get('name'), p.get('niche'), p.get('prompt'), p.get('youtube_id'), p.get('insta_id'), p.get('seed')))
-        conn.commit()
-        cur.close()
-        conn.close()
-        return {"status": "success"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    cur.execute("UPDATE projects SET script = %s, status = 'SCRIPTED' WHERE id = %s", (script, id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {"script": script}
 
-@app.get("/api/db-sync")
-async def db_sync():
-    status = init_cloud_db()
-    return {"status": status}
+@app.post("/api/projects/{id}/render-image")
+async def run_visualizer(id: int):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""SELECT per.prompt, per.seed, p.script 
+                 FROM projects p JOIN personas per ON p.persona_id = per.id WHERE p.id = %s""", (id,))
+    data = cur.fetchone()
+    
+    # Realism Shell
+    prefix = "Hyper-realistic raw photo, 8k UHD, shot on 35mm lens, f/1.8, "
+    suffix = ", visible pores, natural skin grain, cinematic lighting, sharp focus, masterwork."
+    
+    prompt = f"{prefix}{data[0]}, {data[2][:100]}{suffix}"
+    encoded = requests.utils.quote(prompt)
+    seed_param = f"&seed={data[1]}"
+    
+    url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1792&model=flux{seed_param}&nologo=true"
+    
+    cur.execute("INSERT INTO renders (project_id, url, type) VALUES (%s, %s, 'image')", (id, url))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {"url": url}
