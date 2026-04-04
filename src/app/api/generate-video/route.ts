@@ -20,14 +20,14 @@ export async function POST(req: NextRequest) {
   const scriptHint = script ? ` ${script.substring(0, 80)}` : ''
   const videoPrompt = basePrompt + scriptHint
 
-  const res = await fetch('https://api.replicate.com/v1/predictions', {
+  const res = await fetch('https://api.replicate.com/v1/models/minimax/video-01/predictions', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
+      'Prefer': 'wait',
     },
     body: JSON.stringify({
-      model: 'minimax/video-01',
       input: {
         prompt: videoPrompt,
         prompt_optimizer: true,
