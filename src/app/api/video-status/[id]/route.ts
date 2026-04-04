@@ -7,7 +7,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   if (!token) return NextResponse.json({ error: 'No token' }, { status: 400 })
 
   const res = await fetch(`https://api.replicate.com/v1/predictions/${id}`, {
-    headers: { 'Authorization': `Bearer ${token}` },
+    headers: { 'Authorization': `Token ${token}` },
   })
 
   if (!res.ok) return NextResponse.json({ error: `Replicate ${res.status}` }, { status: res.status })

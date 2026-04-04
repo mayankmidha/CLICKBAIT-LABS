@@ -13,7 +13,9 @@ export async function POST(req: NextRequest) {
 
   const token = process.env.REPLICATE_API_TOKEN
   if (!token) {
-    return NextResponse.json({ error: 'REPLICATE_API_TOKEN missing' }, { status: 400 })
+    return NextResponse.json({ 
+      error: 'CRITICAL: REPLICATE_API_TOKEN is missing from Vercel Environment Variables. Please add it to enable video rendering.' 
+    }, { status: 401 })
   }
 
   const basePrompt = VIDEO_PROMPTS[persona_name] || `A professional WOMAN ${persona_name} speaking to camera, high fidelity`
@@ -33,7 +35,7 @@ export async function POST(req: NextRequest) {
   const res = await fetch('https://api.replicate.com/v1/models/kling-ai/kling-v1-5-pro/predictions', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${token}`,
+      'Authorization': `Token ${token}`, // Correct format for Replicate
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ input }),
