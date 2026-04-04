@@ -39,7 +39,7 @@ export default function ProjectWorkspace() {
     setIsProcessing(true)
     setLogs(["[SYS] Initiating Deep Web Triple-Scan..."])
     try {
-      const res = await fetch(`/api/research`, { 
+      await fetch(`/api/research`, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ project_id: parseInt(id as string) })
@@ -57,7 +57,7 @@ export default function ProjectWorkspace() {
     setIsProcessing(true)
     setLogs(prev => [...prev, "[SYS] Engaging Triple-Pass Scriptwriter..."])
     try {
-      const res = await fetch(`/api/generate-script`, { 
+      await fetch(`/api/generate-script`, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ project_id: parseInt(id as string) })
@@ -74,7 +74,23 @@ export default function ProjectWorkspace() {
   async function runRender() {
     setIsProcessing(true)
     try {
-      const res = await fetch(`/api/render-image`, { 
+      await fetch(`/api/render-image`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: parseInt(id as string) })
+      })
+      mutate(`/api/projects/${id}`)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  async function runVideoRender() {
+    setIsProcessing(true)
+    try {
+      await fetch(`/api/render-video`, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ project_id: parseInt(id as string) })
@@ -129,8 +145,8 @@ export default function ProjectWorkspace() {
                {[
                  { id: 'intelligence', name: 'Intelligence', icon: Zap, status: project.research_content ? 'Complete' : 'Pending' },
                  { id: 'script', name: 'Master Script', icon: Brain, status: project.script ? 'Complete' : 'Pending' },
-                 { id: 'vision', name: 'Identity Vision', icon: Eye, status: project.renders?.length > 0 ? 'Complete' : 'Pending' },
-                 { id: 'motion', name: 'Motion Render', icon: Video, status: 'Locked' },
+                 { id: 'vision', name: 'Identity Vision', icon: Eye, status: project.renders?.some((r:any) => r.type === 'image') ? 'Complete' : 'Pending' },
+                 { id: 'motion', name: 'Motion Render', icon: Video, status: project.renders?.some((r:any) => r.type === 'video') ? 'Complete' : 'Pending' },
                ].map((step) => (
                  <button 
                   key={step.id}
@@ -273,7 +289,7 @@ export default function ProjectWorkspace() {
                                      </div>
                                   </div>
                                 ))}
-                                {project.renders?.length === 0 && (
+                                {!project.renders?.some((r:any) => r.type === 'image') && (
                                   <div className="col-span-2 py-32 border border-dashed border-white/5 rounded-2xl flex flex-col items-center gap-4 text-zinc-700">
                                      <Eye size={48} strokeWidth={1} />
                                      <p className="text-xs font-bold uppercase tracking-widest">Generate the face of your influencer.</p>
@@ -303,6 +319,54 @@ export default function ProjectWorkspace() {
                                 <CheckCircle2 size={14} className="text-emerald-500" />
                                 <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Ultra-Definition Active</span>
                              </div>
+                          </div>
+                       </div>
+                    </motion.div>
+                  )}
+
+                  {activeTab === 'motion' && (
+                    <motion.div 
+                      key="motion"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      className="space-y-8"
+                    >
+                       <div className="bg-zinc-900/30 border border-white/5 rounded-3xl p-10 space-y-8">
+                          <div className="flex justify-between items-center text-white">
+                             <div className="space-y-1">
+                                <h3 className="text-2xl font-bold tracking-tight">Vocal & Motion Synthesis</h3>
+                                <p className="text-zinc-500 text-xs font-medium italic">Powered by Kling 1.5 Pro High-Fidelity Engine</p>
+                             </div>
+                             <button 
+                              onClick={runVideoRender}
+                              disabled={isProcessing || !project.renders?.some((r:any) => r.type === 'image')}
+                              className="px-8 py-4 bg-emerald-500 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-400 transition-all flex items-center gap-3 shadow-xl shadow-emerald-500/20 disabled:opacity-20"
+                             >
+                                {isProcessing ? <Loader2 className="animate-spin" size={16} /> : <Video size={16} />}
+                                COMMENCE MOTION RENDER
+                             </button>
+                          </div>
+
+                          <div className="grid md:grid-cols-2 gap-8">
+                             {project.renders?.filter((r:any) => r.type === 'video').map((render: any) => (
+                               <div key={render.id} className="aspect-[9/16] rounded-3xl bg-black border border-white/5 flex items-center justify-center relative overflow-hidden group">
+                                  {render.status === 'PROCESSING' ? (
+                                    <div className="text-center space-y-4">
+                                       <Loader2 className="animate-spin mx-auto text-emerald-500" size={32} />
+                                       <p className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Animating Identity...</p>
+                                    </div>
+                                  ) : (
+                                    <video src={render.url} controls className="w-full h-full object-cover" />
+                                  )}
+                               </div>
+                             ))}
+                             {!project.renders?.some((r:any) => r.type === 'video') && (
+                               <div className="col-span-2 py-32 border border-dashed border-white/5 rounded-3xl flex flex-col items-center gap-4 text-zinc-700">
+                                  <Video size={48} strokeWidth={1} />
+                                  <p className="text-xs font-bold uppercase tracking-widest">Render a 4K portrait first to unlock animation.</p>
+                               </div>
+                             )}
                           </div>
                        </div>
                     </motion.div>
