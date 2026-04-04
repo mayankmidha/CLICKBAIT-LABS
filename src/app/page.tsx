@@ -2,178 +2,226 @@
 
 import { useState } from 'react'
 import { Sidebar } from '@/components/Sidebar'
-import { StatsGrid } from '@/components/StatsGrid'
-import { StudioCanvas } from '@/components/StudioCanvas'
-import { motion } from 'framer-motion'
-import { Sparkles, ArrowUpRight, Loader2 } from 'lucide-react'
-import useSWR from 'swr'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Sparkles, Loader2, ArrowRight, CheckCircle2, Zap } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
-const fetcher = (url: string) => fetch(url).then(res => res.json())
+const NICHES: Record<string, string> = {
+  'AI & Tech': 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  'Finance': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  'Luxury': 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  'Fitness': 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+  'Gaming': 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+}
+
+type Persona = {
+  name: string
+  niche: string
+  dna: string
+  script?: string
+  loading?: boolean
+}
+
+type Phase = 'idle' | 'building' | 'done'
 
 export default function OverviewPage() {
-  const { data: status } = useSWR('/api/system/status', fetcher, { refreshInterval: 5000 })
-  const [autopilotData, setAutopilotData] = useState<any>(null)
-  const [isBuilding, setIsBuilding] = useState(false)
-  
-  const fluxPercent = status?.flux_download?.percent || 0
-  
+  const router = useRouter()
+  const [phase, setPhase] = useState<Phase>('idle')
+  const [personas, setPersonas] = useState<Persona[]>([])
+  const [statusMsg, setStatusMsg] = useState('')
+
   async function runAutopilot() {
-    setIsBuilding(true)
-    setAutopilotData({ entities: [], status: "Initializing Database..." })
+    setPhase('building')
+    setPersonas([])
+    setStatusMsg('Initializing personas...')
+
+    // Step 1: Create all 5 personas
+    let entities: Persona[] = []
     try {
-      // 1. Create all 5 personas rapidly
       const res = await fetch('/api/empire-builder')
-      const initialData = await res.json()
-      
-      if (initialData.status === "PARTIAL_OFFLINE") {
-        setAutopilotData((prev: any) => ({ ...prev, status: "Demo Mode Active (DB Offline)" }))
-      } else {
-        setAutopilotData((prev: any) => ({ ...prev, status: "Generating Viral Content..." }))
-      }
-      
-      const enrichedEntities: any[] = []
-      
-      // 2. Generate scripts for each one by one (to avoid Vercel timeouts)
-      for (const ent of initialData.entities) {
-        try {
-          const scriptRes = await fetch('/api/generate-script', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              topic: `Viral debut for ${ent.name}`, 
-              niche: ent.niche, 
-              style: 'Aggressive Viral' 
-            })
-          })
-          const scriptData = await scriptRes.json()
-          enrichedEntities.push({ ...ent, script: scriptData.script || "Script processing..." })
-          setAutopilotData((prev: any) => ({ ...prev, entities: [...enrichedEntities] })) 
-        } catch (e) {
-          enrichedEntities.push({ ...ent, script: "Neural bottleneck. Generating manually later." })
-          setAutopilotData((prev: any) => ({ ...prev, entities: [...enrichedEntities] }))
-        }
-      }
-      setAutopilotData((prev: any) => ({ ...prev, status: "Production Ready" }))
-    } catch (e) {
-      console.error(e)
-      setAutopilotData({ entities: [], status: "Connection Error" })
-    } finally {
-      setIsBuilding(false)
+      const data = await res.json()
+      entities = data.entities || []
+      // Show all 5 immediately as loading
+      setPersonas(entities.map((e: Persona) => ({ ...e, loading: true })))
+      setStatusMsg('Generating scripts...')
+    } catch {
+      setStatusMsg('Connection error. Try again.')
+      setPhase('idle')
+      return
     }
+
+    // Step 2: Generate a script for each persona one by one
+    const filled: Persona[] = []
+    for (let i = 0; i < entities.length; i++) {
+      const ent = entities[i]
+      let script = ''
+      try {
+        const res = await fetch('/api/generate-script', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            topic: `Viral debut for ${ent.name}`,
+            niche: ent.niche,
+            style: 'Aggressive Viral',
+          }),
+        })
+        const data = await res.json()
+        script = data.script || 'Script unavailable — check your Gemini API key.'
+      } catch {
+        script = 'Script unavailable — check your Gemini API key.'
+      }
+      filled.push({ ...ent, script, loading: false })
+      setPersonas([...filled, ...entities.slice(i + 1).map((e: Persona) => ({ ...e, loading: true }))])
+    }
+
+    setStatusMsg('All 5 personas ready.')
+    setPhase('done')
+  }
+
+  function openInStudio(persona: Persona) {
+    localStorage.setItem('studio_persona', persona.name)
+    localStorage.setItem('studio_script', persona.script || '')
+    router.push('/studio')
   }
 
   return (
     <div className="min-h-screen bg-black text-white flex">
       <Sidebar />
-      
-      <main className="flex-1 ml-64 p-12">
-        <div className="max-w-7xl mx-auto space-y-12">
-          
-          {/* Header */}
-          <div className="flex justify-between items-end">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-zinc-400 shadow-sm">
-                  Command Center
-                </span>
-                <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">v4.0.2</span>
-              </div>
-              <h1 className="text-6xl font-bold tracking-tighter leading-[0.9]">
-                Empire <span className="text-zinc-500 italic font-light">Status.</span>
-              </h1>
-            </div>
 
-            <div className="flex gap-4">
-               <div className="flex flex-col items-end gap-1 px-6 py-2 bg-white/5 border border-white/10 rounded-xl">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-zinc-500 text-right">Flux Engine Sync</span>
-                  <div className="flex items-center gap-3">
-                    <div className="w-32 h-1 bg-white/5 rounded-full overflow-hidden">
-                        <motion.div animate={{ width: `${fluxPercent}%` }} className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-                    </div>
-                    <span className="text-xs font-mono font-bold">{fluxPercent}%</span>
-                  </div>
-               </div>
-               <button 
-                onClick={runAutopilot}
-                disabled={isBuilding}
-                className="flex items-center gap-2 px-6 py-3 bg-white text-black rounded-xl text-xs font-black uppercase tracking-widest hover:bg-zinc-200 transition-all shadow-xl shadow-white/5 disabled:opacity-50"
-               >
-                  {isBuilding ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
-                  Run Empire Autopilot
-               </button>
-            </div>
+      <main className="flex-1 ml-64 p-12">
+        <div className="max-w-4xl mx-auto space-y-16">
+
+          {/* Header */}
+          <div className="space-y-3">
+            <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-zinc-400">
+              Command Center
+            </span>
+            <h1 className="text-6xl font-bold tracking-tighter leading-[0.9]">
+              Empire <span className="text-zinc-500 italic font-light">Builder.</span>
+            </h1>
+            <p className="text-zinc-500 text-sm font-medium">
+              One click — 5 AI personas, 5 viral scripts, ready to render in Studio.
+            </p>
           </div>
 
-          <StatsGrid />
+          {/* Step indicators */}
+          <div className="flex items-center gap-4">
+            {['Create 5 Personas', 'Generate 5 Scripts', 'Render in Studio'].map((label, i) => {
+              const active = (i === 0 && phase !== 'idle') || (i === 1 && phase !== 'idle') || (i === 2 && phase === 'done')
+              const done = (i === 0 && phase !== 'idle') || (i === 1 && phase === 'done') || (i === 2 && false)
+              return (
+                <div key={label} className="flex items-center gap-3">
+                  <div className={`flex items-center gap-2 px-4 py-2 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all ${
+                    active ? 'bg-white text-black border-white' : 'bg-white/5 text-zinc-500 border-white/10'
+                  }`}>
+                    {done && phase === 'done' && i < 2
+                      ? <CheckCircle2 size={12} />
+                      : <span>{i + 1}</span>
+                    }
+                    {label}
+                  </div>
+                  {i < 2 && <div className="w-8 h-px bg-white/10" />}
+                </div>
+              )
+            })}
+          </div>
 
-          <div className="grid lg:grid-cols-3 gap-12">
-            <div className="lg:col-span-2">
-              <StudioCanvas />
-              
-              {autopilotData && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-12 bg-zinc-900/30 border border-white/10 rounded-3xl p-10 space-y-8 shadow-2xl"
-                >
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-sm font-black uppercase tracking-widest text-blue-500">Autopilot Production Feed</h3>
-                    <span className="text-[10px] font-bold text-zinc-500 bg-white/5 px-3 py-1 rounded-full border border-white/10">
-                      {autopilotData.status}
-                    </span>
-                  </div>
-                  <div className="grid md:grid-cols-2 gap-6">
-                    {autopilotData.entities.map((ent: any, i: number) => (
-                      <div key={i} className="bg-black/50 p-6 rounded-2xl border border-white/5 space-y-4">
-                        <h4 className="font-bold text-white flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500" /> {ent.name}
-                        </h4>
-                        <p className="text-[10px] text-zinc-500 leading-relaxed line-clamp-3 italic">
-                          {ent.script}
-                        </p>
+          {/* CTA — only when idle */}
+          {phase === 'idle' && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+              <button
+                onClick={runAutopilot}
+                className="flex items-center gap-3 px-10 py-5 bg-white text-black rounded-full font-black text-sm uppercase tracking-[0.15em] hover:bg-zinc-100 transition-all shadow-2xl shadow-white/10 group"
+              >
+                <Zap size={18} className="fill-black group-hover:scale-110 transition-transform" />
+                Run Empire Autopilot
+              </button>
+            </motion.div>
+          )}
+
+          {/* Building / Done — persona cards */}
+          {(phase === 'building' || phase === 'done') && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-black uppercase tracking-widest text-zinc-500">
+                  {statusMsg}
+                </h2>
+                {phase === 'done' && (
+                  <button
+                    onClick={runAutopilot}
+                    className="text-[10px] font-black uppercase tracking-widest text-zinc-600 hover:text-white transition-colors"
+                  >
+                    Regenerate
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <AnimatePresence mode="popLayout">
+                  {personas.map((persona, i) => (
+                    <motion.div
+                      key={persona.name}
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      className="bg-zinc-900/40 border border-white/5 rounded-2xl p-6 flex items-start gap-6 group hover:border-white/10 transition-colors"
+                    >
+                      {/* Left: persona info */}
+                      <div className="flex-1 space-y-3 min-w-0">
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-lg font-bold tracking-tight">{persona.name}</h3>
+                          <span className={`px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest rounded-full border ${NICHES[persona.niche] || 'bg-white/5 text-zinc-400 border-white/10'}`}>
+                            {persona.niche}
+                          </span>
+                        </div>
+
+                        {persona.loading ? (
+                          <div className="flex items-center gap-2 text-zinc-600">
+                            <Loader2 size={12} className="animate-spin" />
+                            <span className="text-[10px] font-medium">Generating script...</span>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-zinc-400 leading-relaxed line-clamp-2 italic">
+                            {persona.script}
+                          </p>
+                        )}
                       </div>
-                    ))}
+
+                      {/* Right: Open in Studio */}
+                      {!persona.loading && (
+                        <button
+                          onClick={() => openInStudio(persona)}
+                          className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-white text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all opacity-0 group-hover:opacity-100"
+                        >
+                          Open in Studio <ArrowRight size={12} />
+                        </button>
+                      )}
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+
+              {/* Bottom CTA when all done */}
+              {phase === 'done' && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="pt-4 flex items-center gap-4"
+                >
+                  <div className="flex items-center gap-2 text-emerald-500">
+                    <CheckCircle2 size={16} />
+                    <span className="text-xs font-bold">5 personas ready</span>
                   </div>
+                  <span className="text-zinc-700 text-xs">•</span>
+                  <p className="text-zinc-500 text-xs">Hover any card and click <strong className="text-white">Open in Studio</strong> to generate the image.</p>
                 </motion.div>
               )}
             </div>
-
-            <div className="space-y-8">
-               <div className="bg-zinc-900/50 border border-white/5 rounded-3xl p-8 space-y-6">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-zinc-500">Live Research Feed</h3>
-                  <div className="space-y-4">
-                     {[
-                       "Scanned NVIDIA Blackwell benchmarks...",
-                       "Acquired 12 viral hooks for 'Finance'...",
-                       "Flux model download @ 46.6%",
-                       "LoRA training finalized for 'Nova'..."
-                     ].map((log, i) => (
-                       <div key={i} className="flex gap-3 text-xs font-mono">
-                          <span className="text-zinc-700">[{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}]</span>
-                          <span className="text-emerald-500/80">{log}</span>
-                       </div>
-                     ))}
-                  </div>
-               </div>
-
-               <div className="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-3xl p-8 relative overflow-hidden group">
-                  <div className="relative z-10 space-y-4">
-                    <h3 className="text-lg font-bold tracking-tight italic">Upcoming Milestone</h3>
-                    <p className="text-sm text-zinc-400 leading-relaxed font-medium">
-                      Your tech influencer "Nova" is projected to hit 100k views this week based on current retention trends.
-                    </p>
-                    <button className="text-xs font-black uppercase tracking-widest text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-2">
-                      View Projections <ArrowUpRight size={14} />
-                    </button>
-                  </div>
-                  <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700" />
-               </div>
-            </div>
-          </div>
+          )}
 
         </div>
       </main>
     </div>
   )
 }
-// Cloud Engine V18.1 - Production Sync

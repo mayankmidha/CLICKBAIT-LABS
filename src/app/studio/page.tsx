@@ -34,10 +34,12 @@ export default function StudioPage() {
   const [previewUrl, setPreviewUrl] = useState('')
   const [copied, setCopied] = useState(false)
 
-  // Load script from Writer's Room automatically
+  // Load persona + script from Overview or Writer's Room
   useEffect(() => {
     const savedScript = localStorage.getItem('studio_script') || localStorage.getItem('last_script')
+    const savedPersona = localStorage.getItem('studio_persona')
     if (savedScript) setScript(savedScript)
+    if (savedPersona) setSelectedPersona(savedPersona)
   }, [])
 
   async function handleRender() {
