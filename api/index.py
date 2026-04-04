@@ -17,35 +17,38 @@ app = FastAPI()
 
 # --- Vercel Postgres Connection ---
 def get_db_connection():
-    conn = psycopg2.connect(os.environ.get("POSTGRES_URL"), sslmode='require')
+    # Try multiple common env variable names for maximum compatibility
+    url = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL")
+    if not url:
+        raise Exception("Database Connection String Missing")
+    conn = psycopg2.connect(url, sslmode='require')
     return conn
 
 # --- Initialize Database ---
 def init_cloud_db():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('''CREATE TABLE IF NOT EXISTS personas
-                 (id SERIAL PRIMARY KEY, 
-                  name TEXT NOT NULL, 
-                  niche TEXT, 
-                  prompt TEXT,
-                  youtube_id TEXT,
-                  insta_id TEXT,
-                  seed INTEGER)''')
-    # Force add seed if table exists without it
     try:
-        cur.execute("ALTER TABLE personas ADD COLUMN IF NOT EXISTS seed INTEGER")
-    except:
-        pass
-    cur.execute('''CREATE TABLE IF NOT EXISTS content_calendar
-                 (id SERIAL PRIMARY KEY, 
-                  persona_id INTEGER REFERENCES personas(id), 
-                  topic TEXT, 
-                  scheduled_time TEXT, 
-                  status TEXT DEFAULT 'QUEUED')''')
-    conn.commit()
-    cur.close()
-    conn.close()
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute('''CREATE TABLE IF NOT EXISTS personas
+                     (id SERIAL PRIMARY KEY, 
+                      name TEXT NOT NULL, 
+                      niche TEXT, 
+                      prompt TEXT,
+                      youtube_id TEXT,
+                      insta_id TEXT,
+                      seed BIGINT)''')
+        cur.execute('''CREATE TABLE IF NOT EXISTS content_calendar
+                     (id SERIAL PRIMARY KEY, 
+                      persona_id INTEGER REFERENCES personas(id), 
+                      topic TEXT, 
+                      scheduled_time TEXT, 
+                      status TEXT DEFAULT 'QUEUED')''')
+        conn.commit()
+        cur.close()
+        conn.close()
+        print("Cloud DB Initialized Successfully")
+    except Exception as e:
+        print(f"DB Init Error: {e}")
 
 # Try to init on startup
 try:
