@@ -1,6 +1,6 @@
 {
-  "name": "clickbait-labs-v16",
-  "version": "16.0.0",
+  "name": "clickbait-labs-ultimate",
+  "version": "17.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -12,6 +12,7 @@
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "lucide-react": "0.378.0",
+    "framer-motion": "11.2.10",
     "swr": "2.2.5",
     "clsx": "2.1.1",
     "tailwind-merge": "2.3.0"
