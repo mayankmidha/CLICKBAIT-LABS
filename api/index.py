@@ -59,9 +59,21 @@ class ActionRequest(BaseModel):
 
 # --- API Endpoints ---
 
-@app.get("/api/health")
-async def health():
-    return {"status": "Clickbait Labs OS v6.1 - Zero Failure Mode Active"}
+@app.get("/api/onboard-isla")
+async def onboard_isla():
+    """Directly onboards the Scottish AI Architect to the database."""
+    dna = "28yo Scottish woman, striking blue eyes, red hair undercut, sharp bone structure, visible skin pores, tech vest, Edinburgh loft background"
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO personas (name, niche, prompt, seed) VALUES (%s,%s,%s,%s) ON CONFLICT (name) DO UPDATE SET prompt=EXCLUDED.prompt, seed=EXCLUDED.seed", 
+                  ("Isla", "AI & Tech", dna, 1100229))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return {"status": "ISLA_ONBOARDED_SUCCESSFULLY"}
+    except Exception as e:
+        return {"status": "ERROR", "message": str(e)}
 
 @app.get("/api/personas")
 async def get_personas():
