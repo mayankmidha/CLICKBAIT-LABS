@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  /* No rewrites here - handled by vercel.json */
+};
 
 export default nextConfig;
