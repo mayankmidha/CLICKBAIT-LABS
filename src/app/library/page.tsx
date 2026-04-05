@@ -12,7 +12,7 @@ import {
   ArrowUpRight,
   MoreVertical,
   Play,
-  Grid,
+  LayoutGrid,
   List as ListIcon
 } from 'lucide-react'
 import useSWR from 'swr'
@@ -26,8 +26,8 @@ export default function GlobalLibrary() {
 
   const filteredAssets = assets?.filter((a: any) => {
     const matchesFilter = filter === 'all' || a.type === filter
-    const matchesSearch = a.persona_name.toLowerCase().includes(search.toLowerCase()) || 
-                          a.project_title.toLowerCase().includes(search.toLowerCase())
+    const matchesSearch = a.persona_name?.toLowerCase().includes(search.toLowerCase()) || 
+                          a.project_title?.toLowerCase().includes(search.toLowerCase())
     return matchesFilter && matchesSearch
   })
 
@@ -78,7 +78,7 @@ export default function GlobalLibrary() {
                 ))}
              </div>
              <div className="flex items-center gap-4">
-                <Grid size={16} className="text-white" />
+                <LayoutGrid size={16} className="text-white" />
                 <ListIcon size={16} className="text-zinc-700" />
              </div>
           </div>
