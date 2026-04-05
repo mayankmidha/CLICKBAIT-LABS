@@ -31,7 +31,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (!isAuthenticated) {
     return (
-      <div style={{ minHeight: '100-vh', backgroundColor: '#000', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', fontFamily: 'sans-serif' }}>
+      <div style={{ minHeight: '100vh', backgroundColor: '#000', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', fontFamily: 'sans-serif' }}>
         <div style={{ width: '100%', maxWidth: '400px', backgroundColor: '#111', border: '1px solid #333', borderRadius: '24px', padding: '40px', textAlign: 'center' }}>
           <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>FACTORY VAULT</h1>
           <form onSubmit={handleLogin}>
