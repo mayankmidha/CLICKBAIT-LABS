@@ -22,6 +22,7 @@ export default function MatrixPage() {
   const [niche, setNiche] = useState('Gaming')
   const [prompt, setPrompt] = useState('')
   const [seed, setSeed] = useState('555555')
+  const [isSaving, setIsSaving] = useState(false)
 
   function openEdit(p: any) {
     setEditingId(p.id)
@@ -42,6 +43,8 @@ export default function MatrixPage() {
   }
 
   async function handleSave() {
+    if (!name || !prompt) return alert("Missing required fields")
+    setIsSaving(true)
     try {
       const res = await fetch('/api/personas', {
         method: 'POST',
@@ -55,14 +58,16 @@ export default function MatrixPage() {
         })
       })
       if (res.ok) {
-        mutate('/api/personas')
+        await mutate('/api/personas')
         setShowModal(false)
       } else {
         const err = await res.json()
-        alert(`Error: ${err.detail || 'Failed to save'}`)
+        alert(`Error: ${err.detail || 'Failed to save to database'}`)
       }
     } catch (e) {
-      console.error(e)
+      alert("Network Error: Could not reach the factory brain.")
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -202,7 +207,14 @@ export default function MatrixPage() {
                 </div>
 
                 <div className="flex gap-4">
-                  <button onClick={handleSave} className="flex-1 py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">Save Identity</button>
+                  <button 
+                    onClick={handleSave} 
+                    disabled={isSaving}
+                    className="flex-1 py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest hover:bg-zinc-200 transition-all shadow-2xl disabled:opacity-50 flex items-center justify-center gap-3"
+                  >
+                    {isSaving ? <Loader2 className="animate-spin" size={18} /> : null}
+                    {isSaving ? "Committing to Matrix..." : "Save Identity"}
+                  </button>
                   <button onClick={() => setShowModal(false)} className="px-10 py-5 bg-zinc-800 text-white rounded-2xl hover:bg-zinc-700 transition-all">Cancel</button>
                 </div>
               </div>
