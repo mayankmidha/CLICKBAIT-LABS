@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Lock, ShieldAlert, Zap, Loader2, ChevronRight } from 'lucide-react'
+import { Lock, Shield, Zap, Loader2, ChevronRight } from 'lucide-react'
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -64,7 +64,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 autoFocus
-                className={`w-full bg-black/50 border ${error ? 'border-red-500' : 'border-white/10'} rounded-2xl p-5 text-center text-xl font-mono focus:border-white/20 transition-all outline-none`}
+                className={`w-full bg-black/50 border ${error ? 'border-red-500' : 'border-white/10'} rounded-2xl p-5 text-center text-xl font-mono focus:border-white/20 transition-all outline-none text-white`}
                 placeholder="••••••••"
                />
             </div>
@@ -78,7 +78,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
           </form>
 
           <div className="flex items-center justify-center gap-2 pt-4 opacity-30">
-             <ShieldAlert size={12} />
+             <Shield size={12} />
              <span className="text-[8px] font-black uppercase tracking-tighter">Encrypted Session Layer Active</span>
           </div>
         </motion.div>
