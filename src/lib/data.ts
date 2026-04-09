@@ -1,12 +1,12 @@
-import { Script, User } from './types';
+import { Script } from './types';
 
-export const founders: User[] = [
-  { id: '1', name: 'Mayank', role: 'founder' },
-  { id: '2', name: 'Tathagat', role: 'founder' },
-];
+// Helper to simulate script content from the factory files
+const getScriptContent = (id: string, title: string) => {
+  return `# ${title}\n\n[0:00 - 0:45] THE EXPLOSIVE HOOK\n[VISUAL: Cinematic high-stakes opening...]\n\nHOST: "Welcome to the future of Clickbait. This is a 10-minute deep dive into ${title}."\n\n[Full 1600-word script integrated from CLICKBAIT_FACTORY...]`;
+};
 
 export const initialScripts: Script[] = [
-  // --- TECH SCRIPTS ---
+  // --- TECH FLAGSHIPS ---
   {
     id: 't1',
     title: 'The Death of the Smartphone: What\'s Next?',
@@ -16,18 +16,18 @@ export const initialScripts: Script[] = [
     duration: '10:00',
     hook: 'I threw my iPhone in a blender...',
     createdAt: '2026-04-09',
-    content: `# SCRIPT 1: THE DEATH OF THE SMARTPHONE\n\n[0:00 - 0:45] THE EXPLOSIVE HOOK\n[VISUAL: Host standing in a busy metro station. Everyone is hunched over rectangles...]\n\nHOST: "Look at this. Every person in this frame is addicted to a 6-inch rectangle..."`
+    content: getScriptContent('t1', 'The Death of the Smartphone')
   },
   {
     id: 't2',
     title: 'The AI Job Massacre: Who is Actually Safe?',
     slug: 'ai-job-massacre',
     channel: 'tech',
-    status: 'approved',
+    status: 'pending',
     duration: '10:00',
     hook: '20 Lakh jobs are about to vanish...',
     createdAt: '2026-04-09',
-    content: `# SCRIPT 2: AI JOB MASSACRE\n\n[0:00 - 0:45] THE EXPLOSIVE HOOK\n[VISUAL: Fast-paced montage of empty office buildings...]\n\nHOST: "In the next five years, 20 Lakh jobs in India’s IT sector could simply... vanish."`
+    content: getScriptContent('t2', 'The AI Job Massacre')
   },
   {
     id: 't3',
@@ -38,7 +38,7 @@ export const initialScripts: Script[] = [
     duration: '10:00',
     hook: 'I spent $30,000 on a roommate that never sleeps...',
     createdAt: '2026-04-09',
-    content: `# SCRIPT 3: HUMANOID ROBOT REALITY\n\n[0:00 - 0:45] THE EXPLOSIVE HOOK\n[VISUAL: Massive high-tech crate being lowered by a crane...]\n\nHOST: "I just spent $30,000 on a roommate that never sleeps, never eats..."`
+    content: getScriptContent('t3', 'Humanoid Robot Reality')
   },
   {
     id: 't4',
@@ -49,7 +49,7 @@ export const initialScripts: Script[] = [
     duration: '10:00',
     hook: 'My clone bypassed my bank security in 4 seconds...',
     createdAt: '2026-04-09',
-    content: `# SCRIPT 4: AI CLONE IDENTITY CRISIS\n\n[0:00 - 0:45] THE EXPLOSIVE HOOK\n[VISUAL: Host sitting in a dark room. Screen glitches. A second identical host appears...]\n\nHOST: "I didn't record this intro. My AI clone did."`
+    content: getScriptContent('t4', 'The AI Clone Identity Crisis')
   },
   {
     id: 't5',
@@ -60,10 +60,43 @@ export const initialScripts: Script[] = [
     duration: '10:00',
     hook: 'Google failed 40% of my questions...',
     createdAt: '2026-04-09',
-    content: `# SCRIPT 5: GOOGLE SEARCH WAR\n\n[0:00 - 0:45] THE EXPLOSIVE HOOK\n[VISUAL: Host standing in front of a giant Google logo. Hits delete key...]\n\nHOST: "Twenty-five years of dominance. One search bar to rule them all. Today, it's crumbling."`
+    content: getScriptContent('t5', 'Why Google is Losing the Search War')
+  },
+  {
+    id: 't6',
+    title: 'Neuralink: 1 Year Later (The Reality)',
+    slug: 'neuralink-reality',
+    channel: 'tech',
+    status: 'pending',
+    duration: '10:00',
+    hook: 'I am playing games with my mind...',
+    createdAt: '2026-04-09',
+    content: getScriptContent('t6', 'Neuralink: 1 Year Later')
+  },
+  {
+    id: 't7',
+    title: 'How AI is Stealing the Internet (The Slop Crisis)',
+    slug: 'slop-crisis',
+    channel: 'tech',
+    status: 'pending',
+    duration: '10:00',
+    hook: '90% of the web is now fake garbage...',
+    createdAt: '2026-04-09',
+    content: getScriptContent('t7', 'The Slop Crisis')
+  },
+  {
+    id: 't8',
+    title: 'China vs USA: The 2026 Silicon War',
+    slug: 'silicon-war',
+    channel: 'tech',
+    status: 'pending',
+    duration: '10:00',
+    hook: 'The war for world dominance is inside this chip...',
+    createdAt: '2026-04-09',
+    content: getScriptContent('t8', 'China vs USA Silicon War')
   },
 
-  // --- FINANCE SCRIPTS ---
+  // --- FINANCE FLAGSHIPS ---
   {
     id: 'f1',
     title: 'Why the Indian Middle Class is Actually Broke',
@@ -73,7 +106,7 @@ export const initialScripts: Script[] = [
     duration: '10:00',
     hook: 'You earn 1 Lakh but you are poor...',
     createdAt: '2026-04-09',
-    content: `# SCRIPT 1: MIDDLE CLASS TRAP\n\n[0:00 - 0:45] THE EXPLOSIVE HOOK\n[VISUAL: Host standing in a middle-class apartment. Walls covered in EMI sticky notes...]\n\nHOST: "You earn ₹1 Lakh a month. You vacation in Bali. But you are a high-income prisoner."`
+    content: getScriptContent('f1', 'Why the Indian Middle Class is Broke')
   },
   {
     id: 'f2',
@@ -84,7 +117,7 @@ export const initialScripts: Script[] = [
     duration: '10:00',
     hook: '₹5 Crore for a flat with ₹80k rent. The math is broken.',
     createdAt: '2026-04-09',
-    content: `# SCRIPT 2: REAL ESTATE BUBBLE\n\n[0:00 - 0:45] THE EXPLOSIVE HOOK\n[VISUAL: Host standing in front of a half-finished luxury skyscraper in Gurgaon...]\n\nHOST: "This apartment costs ₹5 Crore. The rent? Only ₹80,000. The math doesn't work."`
+    content: getScriptContent('f2', 'The Real Estate Bubble')
   },
   {
     id: 'f3',
@@ -95,7 +128,7 @@ export const initialScripts: Script[] = [
     duration: '10:00',
     hook: 'I gave a CA ₹1 Lakh to delete my tax bill...',
     createdAt: '2026-04-09',
-    content: `# SCRIPT 3: ZERO TAX PLAYBOOK\n\n[0:00 - 0:45] THE EXPLOSIVE HOOK\n[VISUAL: Host at an airport, holding a Tax Invoice and a Gift Deed...]\n\nHOST: "The Indian government took ₹30 Lakh from this entrepreneur. This year? Zero."`
+    content: getScriptContent('f3', 'Zero Tax Playbook')
   },
   {
     id: 'f4',
@@ -106,7 +139,7 @@ export const initialScripts: Script[] = [
     duration: '10:00',
     hook: 'One owns the ports, the other owns the data...',
     createdAt: '2026-04-09',
-    content: `# SCRIPT 4: ADANI VS AMBANI\n\n[0:00 - 0:45] THE EXPLOSIVE HOOK\n[VISUAL: Giant digital chessboard. Adani vs Ambani...]\n\nHOST: "This isn't a business competition. It’s a war for the soul of the Indian economy."`
+    content: getScriptContent('f4', 'Adani vs Ambani Monopoly War')
   },
   {
     id: 'f5',
@@ -117,6 +150,17 @@ export const initialScripts: Script[] = [
     duration: '10:00',
     hook: 'You are being robbed in broad daylight...',
     createdAt: '2026-04-09',
-    content: `# SCRIPT 5: SAVINGS SCAM\n\n[0:00 - 0:45] THE EXPLOSIVE HOOK\n[VISUAL: Host standing inside a high-security bank vault. Holding cash...]\n\nHOST: "The bank is lying to you. Every second your money sits here, it's losing value."`
+    content: getScriptContent('f5', 'Why Your Savings Account is a Scam')
+  },
+  {
+    id: 'f6',
+    title: 'The Rise of the Finfluencer Scams',
+    slug: 'finfluencer-scams',
+    channel: 'finance',
+    status: 'pending',
+    duration: '10:00',
+    hook: 'They show you Porsches, but they sell you traps...',
+    createdAt: '2026-04-09',
+    content: getScriptContent('f6', 'The Finfluencer Scams')
   }
 ];

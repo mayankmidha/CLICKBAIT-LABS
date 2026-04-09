@@ -20,6 +20,7 @@ const founderItems = [
   { name: "Overview", icon: LayoutDashboard, href: "/" },
   { name: "Tech Channel", icon: Cpu, href: "/tech" },
   { name: "Finance Channel", icon: TrendingUp, href: "/finance" },
+  { name: "Manage Team", icon: User, href: "/team" },
   { name: "The Bin", icon: Trash2, href: "/bin" },
 ];
 
