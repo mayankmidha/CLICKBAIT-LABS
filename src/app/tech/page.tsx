@@ -140,16 +140,24 @@ export default function TechPage() {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-6 md:p-12 font-mono text-sm leading-relaxed text-zinc-300 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] bg-fixed">
-              <div className="max-w-3xl mx-auto space-y-8">
-                {selectedScript.content.split('\n').map((line, i) => (
-                  <p key={i} className={cn(
-                    line.startsWith('[VISUAL') && "text-red-500/80 italic text-xs border-l-2 border-red-500/30 pl-4 py-1",
-                    line.startsWith('HOST:') && "text-white font-bold text-lg",
-                    line.startsWith('#') && "text-3xl font-black text-white border-b-2 border-red-600 pb-4 mb-10"
-                  )}>
-                    {line}
-                  </p>
-                ))}
+              <div className="max-w-3xl mx-auto space-y-4">
+                {selectedScript.content.split('\n').map((line, i) => {
+                  const isVisual = line.startsWith('[VISUAL') || line.startsWith('**VISUAL');
+                  const isHost = line.startsWith('HOST:') || line.startsWith('**HOST:');
+                  const isHeading = line.startsWith('#');
+                  
+                  return (
+                    <p key={i} className={cn(
+                      "min-h-[1em]",
+                      isVisual && "text-red-500/80 italic text-xs border-l-2 border-red-500/30 pl-4 py-1 my-4",
+                      isHost && "text-white font-bold text-lg mt-6 mb-2",
+                      isHeading && "text-3xl font-black text-white border-b-2 border-red-600 pb-4 mb-10 mt-12",
+                      !isVisual && !isHost && !isHeading && line.trim() !== "" && "text-zinc-400"
+                    )}>
+                      {line}
+                    </p>
+                  );
+                })}
               </div>
             </div>
             <div className="p-6 border-t border-white/10 bg-zinc-900/80 flex flex-col md:flex-row justify-end gap-4">
