@@ -45,3 +45,13 @@ model Comment {
   createdAt DateTime @default(now())
   script    Script   @relation(fields: [scriptId], references: [id])
 }
+
+model Expense {
+  id        String   @id @default(cuid())
+  title     String
+  amount    Float
+  category  String   // 'equipment' | 'location' | 'food' | 'talent' | 'misc'
+  date      DateTime @default(now())
+  addedBy   String   // 'Mayank' | 'Tathagat'
+  notes     String?
+}

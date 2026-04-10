@@ -18,16 +18,48 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useRole } from "@/lib/store/RoleContext";
+import { CostCalculator } from "@/components/shoot/CostCalculator";
 
 export default function ShootModePage() {
-  const [activeBatch, setActiveBatch] = useState<Script[]>(
-    initialScripts.filter(s => s.status === 'approved').slice(0, 25)
-  );
+  const { user } = useRole();
+  const [activeBatch, setActiveBatch] = useState<Script[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isTeleprompter, setIsTeleprompter] = useState(false);
+  const [showCosts, setShowCosts] = useState(false);
   const [completedIds, setCompletedIds] = useState<string[]>([]);
 
+  useEffect(() => {
+    async function load() {
+      const { getScripts } = await import("@/app/actions/scripts");
+      const data = await getScripts(undefined, 'approved');
+      setActiveBatch(data as any);
+      setIsLoading(false);
+    }
+    load();
+  }, []);
+
   const currentScript = activeBatch[currentIndex];
+
+  if (!currentScript && !isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto p-20 text-center space-y-6">
+        <h2 className="text-2xl font-bold text-zinc-500">Queue Exhausted</h2>
+        <p className="text-zinc-600">No approved scripts ready for production. Approve scripts in the control nodes first.</p>
+        <VortexButton onClick={() => setShowCosts(!showCosts)} variant="secondary">
+          {showCosts ? "Hide Cost Ledger" : "View Cost Ledger"}
+        </VortexButton>
+        {showCosts && (
+          <div className="mt-8 text-left">
+            <ObsidianCard className="p-8 border-red-600/20 bg-zinc-950">
+              <CostCalculator addedBy={user?.name || "Founder"} />
+            </ObsidianCard>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   const handleComplete = () => {
     setCompletedIds(prev => [...prev, currentScript.id]);
@@ -37,6 +69,8 @@ export default function ShootModePage() {
   };
 
   const progress = (completedIds.length / activeBatch.length) * 100;
+
+  if (isLoading) return <div className="p-20 text-center font-black uppercase tracking-[0.3em] text-zinc-800">Initializing Set...</div>;
 
   return (
     <div className={cn(
@@ -56,6 +90,15 @@ export default function ShootModePage() {
         </div>
 
         <div className="flex items-center gap-4 bg-zinc-900/50 p-2 rounded-xl border border-white/5">
+          <div className="flex items-center gap-2 px-4 border-r border-white/10">
+            <VortexButton 
+              onClick={() => setShowCosts(!showCosts)}
+              variant={showCosts ? "primary" : "secondary"}
+              className="h-8 px-4 text-[10px]"
+            >
+              Costs
+            </VortexButton>
+          </div>
           <div className="px-4 border-r border-white/10">
             <p className="text-[8px] font-black text-zinc-500 uppercase">Daily Progress</p>
             <p className="text-xl font-black text-white">{completedIds.length} / {activeBatch.length}</p>
@@ -82,6 +125,18 @@ export default function ShootModePage() {
           className="bg-red-600 h-full shadow-[0_0_10px_rgba(255,0,0,0.5)]"
         />
       </div>
+
+      {showCosts && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }} 
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-12"
+        >
+          <ObsidianCard className="p-8 border-red-600/20 bg-zinc-950">
+            <CostCalculator addedBy={user?.name || "Founder"} />
+          </ObsidianCard>
+        </motion.div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Left: Queue Sidebar */}
