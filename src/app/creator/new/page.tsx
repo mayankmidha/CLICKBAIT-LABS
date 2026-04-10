@@ -132,7 +132,7 @@ export default function NewScriptPage() {
               <h4 className="text-[10px] font-black uppercase text-white">Pro Tip</h4>
             </div>
             <p className="text-[11px] text-zinc-500 leading-relaxed">
-              Ensure your script follows the 2026 High-Retention Framework: [Hook] -> [Context] -> [Escalation] -> [Investigation] -> [Synthesis].
+              Ensure your script follows the 2026 High-Retention Framework: [Hook] &rarr; [Context] &rarr; [Escalation] &rarr; [Investigation] &rarr; [Synthesis].
             </p>
           </ObsidianCard>
         </div>
