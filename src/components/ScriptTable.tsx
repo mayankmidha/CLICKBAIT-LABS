@@ -51,7 +51,7 @@ export function ScriptTable({ scripts, onApprove, onReject, onRestore, onView }:
                   <div className="w-8 h-8 rounded bg-zinc-900 border border-white/5 flex items-center justify-center group-hover:border-red-600/30 transition-all shadow-inner">
                     <FileText size={14} className="text-zinc-600 group-hover:text-red-500" />
                   </div>
-                  <span className="truncate max-w-[200px]">{script.title}</span>
+                  <span>{script.title}</span>
                 </button>
               </td>
               <td className="px-6 py-4 text-xs text-zinc-500 max-w-xs truncate italic font-medium">
