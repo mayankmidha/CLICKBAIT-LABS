@@ -24,7 +24,7 @@ export default function TechPage() {
   }, []);
 
   const filteredScripts = useMemo(() => {
-    return scripts.filter(s => {
+    return scripts.filter((s: any) => {
       const matchesStatus = statusFilter === 'all' ? s.status !== 'deleted' : s.status === statusFilter;
       const matchesSearch = s.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                            s.hook.toLowerCase().includes(searchQuery.toLowerCase());

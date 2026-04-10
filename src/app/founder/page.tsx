@@ -22,10 +22,10 @@ export default function FounderDashboard() {
       const allScripts = await getScripts();
       setStats({
         total: allScripts.length,
-        approved: allScripts.filter(s => s.status === 'approved').length,
-        pending: allScripts.filter(s => s.status === 'pending').length,
-        tech: allScripts.filter(s => s.channel === 'tech').length,
-        finance: allScripts.filter(s => s.channel === 'finance').length,
+        approved: allScripts.filter((s: any) => s.status === 'approved').length,
+        pending: allScripts.filter((s: any) => s.status === 'pending').length,
+        tech: allScripts.filter((s: any) => s.channel === 'tech').length,
+        finance: allScripts.filter((s: any) => s.channel === 'finance').length,
       });
       setIsLoading(false);
     }

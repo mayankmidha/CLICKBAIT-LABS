@@ -41,16 +41,16 @@ export default function Home() {
   }, [user, router]);
 
   const stats = useMemo(() => {
-    const tech = scripts.filter(s => s.channel === 'tech');
-    const finance = scripts.filter(s => s.channel === 'finance');
-    
+    const tech = scripts.filter((s: any) => s.channel === 'tech');
+    const finance = scripts.filter((s: any) => s.channel === 'finance');
+
     return {
       total: scripts.length,
-      approved: scripts.filter(s => s.status === 'approved').length,
-      pending: scripts.filter(s => s.status === 'pending').length,
+      approved: scripts.filter((s: any) => s.status === 'approved').length,
+      pending: scripts.filter((s: any) => s.status === 'pending').length,
       techCount: tech.length,
       financeCount: finance.length,
-      shootQueue: scripts.filter(s => s.status === 'approved').slice(0, 5)
+      shootQueue: scripts.filter((s: any) => s.status === 'approved').slice(0, 5)
     };
   }, [scripts]);
 
