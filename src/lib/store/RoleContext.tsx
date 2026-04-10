@@ -31,22 +31,27 @@ export function RoleProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('clickbait_user');
-    const savedCreators = localStorage.getItem('clickbait_creators');
-    
-    if (savedUser) setUser(JSON.parse(savedUser));
-    
-    if (savedCreators) {
-      setCreators(JSON.parse(savedCreators));
-    } else {
-      const initialCreators = [
-        { id: 'c1', name: 'Valkyrie', email: 'valkyrie@talent.io', niche: 'tech' as const, createdAt: '2026-04-01' },
-        { id: 'c2', name: 'Kira', email: 'kira@talent.io', niche: 'finance' as const, createdAt: '2026-04-02' }
-      ];
-      setCreators(initialCreators);
-      localStorage.setItem('clickbait_creators', JSON.stringify(initialCreators));
+    try {
+      const savedUser = localStorage.getItem('clickbait_user');
+      const savedCreators = localStorage.getItem('clickbait_creators');
+      
+      if (savedUser) setUser(JSON.parse(savedUser));
+      
+      if (savedCreators) {
+        setCreators(JSON.parse(savedCreators));
+      } else {
+        const initialCreators = [
+          { id: 'c1', name: 'Valkyrie', email: 'valkyrie@talent.io', niche: 'tech' as const, createdAt: '2026-04-01' },
+          { id: 'c2', name: 'Kira', email: 'kira@talent.io', niche: 'finance' as const, createdAt: '2026-04-02' }
+        ];
+        setCreators(initialCreators);
+        localStorage.setItem('clickbait_creators', JSON.stringify(initialCreators));
+      }
+    } catch (e) {
+      console.error('RoleProvider Storage Error:', e);
+    } finally {
+      setIsLoaded(true);
     }
-    setIsLoaded(true);
   }, []);
 
   const login = (email: string, pass: string) => {

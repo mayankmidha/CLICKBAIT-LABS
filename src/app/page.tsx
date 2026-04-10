@@ -33,9 +33,16 @@ export default function Home() {
     }
 
     async function loadData() {
-      const data = await getScripts();
-      setScripts(data as any);
-      setIsLoading(false);
+      try {
+        const data = await getScripts();
+        if (data && data.length > 0) {
+          setScripts(data as any);
+        }
+      } catch (e) {
+        console.error('Home Page Data Sync Error:', e);
+      } finally {
+        setIsLoading(false);
+      }
     }
     loadData();
   }, [user, router]);

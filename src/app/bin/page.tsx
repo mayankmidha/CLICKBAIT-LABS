@@ -14,9 +14,16 @@ export default function BinPage() {
 
   useEffect(() => {
     async function loadScripts() {
-      const data = await getScripts(undefined, 'rejected');
-      setScripts(data as any);
-      setIsLoading(false);
+      try {
+        const data = await getScripts(undefined, 'rejected');
+        if (data && data.length > 0) {
+          setScripts(data as any);
+        }
+      } catch (e) {
+        console.error('Bin Sync Error:', e);
+      } finally {
+        setIsLoading(false);
+      }
     }
     loadScripts();
   }, []);

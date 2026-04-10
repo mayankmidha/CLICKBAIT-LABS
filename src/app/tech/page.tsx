@@ -16,9 +16,16 @@ export default function TechPage() {
 
   useEffect(() => {
     async function loadScripts() {
-      const data = await getScripts('tech');
-      setScripts(data as any);
-      setIsLoading(false);
+      try {
+        const data = await getScripts('tech');
+        if (data && data.length > 0) {
+          setScripts(data as any);
+        }
+      } catch (e) {
+        console.error('Tech Sync Error:', e);
+      } finally {
+        setIsLoading(false);
+      }
     }
     loadScripts();
   }, []);

@@ -19,15 +19,22 @@ export default function FounderDashboard() {
 
   useEffect(() => {
     async function loadStats() {
-      const allScripts = await getScripts();
-      setStats({
-        total: allScripts.length,
-        approved: allScripts.filter((s: any) => s.status === 'approved').length,
-        pending: allScripts.filter((s: any) => s.status === 'pending').length,
-        tech: allScripts.filter((s: any) => s.channel === 'tech').length,
-        finance: allScripts.filter((s: any) => s.channel === 'finance').length,
-      });
-      setIsLoading(false);
+      try {
+        const allScripts = await getScripts();
+        if (allScripts && allScripts.length > 0) {
+          setStats({
+            total: allScripts.length,
+            approved: allScripts.filter((s: any) => s.status === 'approved').length,
+            pending: allScripts.filter((s: any) => s.status === 'pending').length,
+            tech: allScripts.filter((s: any) => s.channel === 'tech').length,
+            finance: allScripts.filter((s: any) => s.channel === 'finance').length,
+          });
+        }
+      } catch (e) {
+        console.error('Founder Stats Error:', e);
+      } finally {
+        setIsLoading(false);
+      }
     }
     loadStats();
   }, []);

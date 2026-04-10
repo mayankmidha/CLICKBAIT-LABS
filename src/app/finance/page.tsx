@@ -16,9 +16,16 @@ export default function FinancePage() {
 
   useEffect(() => {
     async function loadScripts() {
-      const data = await getScripts('finance');
-      setScripts(data as any);
-      setIsLoading(false);
+      try {
+        const data = await getScripts('finance');
+        if (data && data.length > 0) {
+          setScripts(data as any);
+        }
+      } catch (e) {
+        console.error('Finance Sync Error:', e);
+      } finally {
+        setIsLoading(false);
+      }
     }
     loadScripts();
   }, []);
