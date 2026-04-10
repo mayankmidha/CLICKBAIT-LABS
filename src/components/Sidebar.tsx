@@ -1,105 +1,98 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
+  LayoutDashboard, 
   Cpu, 
   TrendingUp, 
   Calendar, 
   Trash2, 
-  LayoutDashboard, 
-  ChevronRight,
-  User,
-  ShieldCheck,
+  Users, 
+  User, 
+  LogOut,
   Zap
 } from "lucide-react";
+import { useRole } from "@/lib/store/RoleContext";
 import { cn } from "@/lib/utils";
-
-const founderItems = [
-  { name: "Overview", icon: LayoutDashboard, href: "/" },
-  { name: "Tech Channel", icon: Cpu, href: "/tech" },
-  { name: "Finance Channel", icon: TrendingUp, href: "/finance" },
-  { name: "Manage Team", icon: User, href: "/team" },
-  { name: "The Bin", icon: Trash2, href: "/bin" },
-];
-
-const creatorItems = [
-  { name: "Shoot Schedule", icon: Calendar, href: "/schedule" },
-];
 
 export function Sidebar() {
   const pathname = usePathname();
-  const [role, setRole] = useState<'founder' | 'creator'>('founder');
+  const { user, logout } = useRole();
 
-  const menuItems = role === 'founder' ? founderItems : creatorItems;
+  const founderItems = [
+    { name: "Command Center", icon: LayoutDashboard, href: "/" },
+    { name: "Founder Control", icon: User, href: "/founder" },
+    { name: "Tech Channel", icon: Cpu, href: "/tech" },
+    { name: "Finance Channel", icon: TrendingUp, href: "/finance" },
+    { name: "Neural Forge", icon: Zap, href: "/creator/new" },
+    { name: "Production Team", icon: Users, href: "/team" },
+    { name: "The Bin", icon: Trash2, href: "/bin" },
+  ];
+
+  const creatorItems = [
+    { name: "My Schedule", icon: Calendar, href: "/schedule" },
+    { name: "Neural Forge", icon: Zap, href: "/creator/new" },
+    { name: "Tech Pipeline", icon: Cpu, href: "/tech" },
+    { name: "Finance Pipeline", icon: TrendingUp, href: "/finance" },
+  ];
+
+  const items = user?.role === "founder" ? founderItems : creatorItems;
 
   return (
-    <aside className="w-64 border-r border-white/10 flex flex-col bg-black min-h-screen">
-      <div className="p-6">
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 bg-red-600 rounded flex items-center justify-center font-bold text-white group-hover:shadow-[0_0_15px_rgba(255,0,0,0.5)] transition-all">
-            CB
-          </div>
-          <span className="font-bold tracking-tighter text-xl italic">CLICKBAIT</span>
-        </Link>
+    <div className="w-64 h-screen bg-[#050505] border-r border-white/5 flex flex-col fixed left-0 top-0 z-50">
+      <div className="p-6 flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center shadow-[0_0_15px_rgba(255,0,0,0.3)]">
+          <Zap size={18} className="text-white fill-white" />
+        </div>
+        <span className="font-black tracking-tighter text-xl">CLICKBAIT</span>
       </div>
 
-      <div className="px-4 mb-6">
-        <button 
-          onClick={() => setRole(role === 'founder' ? 'creator' : 'founder')}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-zinc-900 border border-white/5 hover:border-red-600/30 transition-all group"
-        >
-          <div className="flex items-center gap-2">
-            {role === 'founder' ? <ShieldCheck size={14} className="text-red-500" /> : <Zap size={14} className="text-amber-500" />}
-            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 group-hover:text-white">
-              Mode: {role}
-            </span>
-          </div>
-          <ChevronRight size={12} className="text-zinc-600 group-hover:text-white" />
-        </button>
-      </div>
-
-      <nav className="flex-1 px-4 space-y-1">
-        <p className="px-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-600 mb-2">Navigation</p>
-        {menuItems.map((item) => {
+      <nav className="flex-1 px-4 py-4 space-y-1">
+        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-600 mb-4 px-2">Navigation</p>
+        {items.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
               key={item.name}
               href={item.href}
               className={cn(
-                "flex items-center justify-between px-3 py-2.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all group",
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all group",
                 isActive 
-                  ? "bg-red-600/10 text-red-500 border border-red-600/20 shadow-[0_0_10px_rgba(255,0,0,0.05)]" 
-                  : "text-zinc-500 hover:text-white hover:bg-white/5"
+                  ? "bg-red-600/10 text-red-500 border border-red-600/20 shadow-[0_0_20px_rgba(255,0,0,0.05)]" 
+                  : "text-zinc-500 hover:text-white hover:bg-white/5 border border-transparent"
               )}
             >
-              <div className="flex items-center gap-3">
-                <item.icon size={16} className={isActive ? "text-red-500" : "group-hover:text-white"} />
-                {item.name}
-              </div>
-              {isActive && <div className="w-1 h-1 rounded-full bg-red-500 shadow-[0_0_5px_#ff0000]" />}
+              <item.icon size={18} className={isActive ? "text-red-500" : "text-zinc-600 group-hover:text-zinc-300"} />
+              {item.name}
             </Link>
           );
         })}
       </nav>
 
-      <div className="p-4 border-t border-white/10 bg-zinc-950/50">
-        <div className="flex items-center gap-3 px-3 py-2">
-          <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center border border-white/10 ring-2 ring-red-600/20">
-            <User size={16} className="text-zinc-400" />
+      <div className="p-4 border-t border-white/5 bg-white/[0.02]">
+        <div className="flex items-center gap-3 px-2 mb-4">
+          <div className="w-10 h-10 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center overflow-hidden">
+            {user?.avatar ? (
+              <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+            ) : (
+              <User size={20} className="text-zinc-600" />
+            )}
           </div>
-          <div className="flex-1">
-            <p className="text-xs font-black uppercase tracking-tight text-white">
-              {role === 'founder' ? 'MAYANK' : 'CREATOR'}
-            </p>
-            <p className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest leading-none mt-1">
-              {role === 'founder' ? 'Co-Founder' : 'Production Team'}
-            </p>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-white truncate">{user?.name}</p>
+            <p className="text-[10px] font-black uppercase text-red-600 tracking-tight">{user?.role} Access</p>
           </div>
         </div>
+        
+        <button 
+          onClick={logout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-zinc-500 hover:text-red-500 hover:bg-red-500/5 transition-all group border border-transparent hover:border-red-500/20"
+        >
+          <LogOut size={18} className="group-hover:translate-x-0.5 transition-transform" />
+          Terminate Session
+        </button>
       </div>
-    </aside>
+    </div>
   );
 }

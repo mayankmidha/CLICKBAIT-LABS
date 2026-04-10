@@ -1,0 +1,47 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  role      String   // 'founder' | 'creator'
+  avatar    String?
+  createdAt DateTime @default(now())
+  scripts   Script[] @relation("AssignedTo")
+}
+
+model Script {
+  id         String   @id @default(cuid())
+  title      String
+  slug       String   @unique
+  channel    String   // 'tech' | 'finance'
+  status     String   // 'pending' | 'approved' | 'rejected' | 'deleted'
+  duration   String
+  hook       String
+  tone       String?
+  content    String   // Markdown content
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  assignedTo String?
+  creator    User?    @relation("AssignedTo", fields: [assignedTo], references: [id])
+  comments   Comment[]
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  scriptId  String
+  authorId  String
+  createdAt DateTime @default(now())
+  script    Script   @relation(fields: [scriptId], references: [id])
+}

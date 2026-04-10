@@ -1,19 +1,27 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { initialScripts } from "@/lib/data";
+import { useState, useMemo, useEffect } from "react";
+import { getScripts, updateScriptStatus } from "@/app/actions/scripts";
 import { Script, ScriptStatus } from "@/lib/types";
 import { ScriptTable } from "@/components/ScriptTable";
 import { TrendingUp, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function FinancePage() {
-  const [scripts, setScripts] = useState<Script[]>(
-    initialScripts.filter(s => s.channel === 'finance')
-  );
+  const [scripts, setScripts] = useState<Script[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedScript, setSelectedScript] = useState<Script | null>(null);
   const [statusFilter, setStatusFilter] = useState<ScriptStatus | 'all'>('pending');
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    async function loadScripts() {
+      const data = await getScripts('finance');
+      setScripts(data as any);
+      setIsLoading(false);
+    }
+    loadScripts();
+  }, []);
 
   const filteredScripts = useMemo(() => {
     return scripts.filter(s => {
@@ -24,13 +32,17 @@ export default function FinancePage() {
     });
   }, [scripts, statusFilter, searchQuery]);
 
-  const handleApprove = (id: string) => {
+  const handleApprove = async (id: string) => {
+    await updateScriptStatus(id, 'approved');
     setScripts(prev => prev.map(s => s.id === id ? { ...s, status: 'approved' } : s));
   };
 
-  const handleReject = (id: string) => {
+  const handleReject = async (id: string) => {
+    await updateScriptStatus(id, 'rejected');
     setScripts(prev => prev.map(s => s.id === id ? { ...s, status: 'rejected' } : s));
   };
+
+  if (isLoading) return <div className="p-20 text-center font-black uppercase tracking-[0.3em] text-zinc-800">Neural Sync in Progress...</div>;
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto pb-20">

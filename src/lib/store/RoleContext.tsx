@@ -1,30 +1,76 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User, Creator } from '../types';
+import { useRouter } from 'next/navigation';
 
 interface RoleContextType {
   user: User | null;
   creators: Creator[];
-  setUser: (user: User | null) => void;
+  login: (email: string, pass: string) => boolean;
+  logout: () => void;
+  canApprove: boolean;
   addCreator: (creator: Omit<Creator, 'id' | 'createdAt'>) => void;
   removeCreator: (id: string) => void;
 }
 
 const RoleContext = createContext<RoleContextType | undefined>(undefined);
 
-export function RoleProvider({ children }: { children: ReactNode }) {
-  // Default to Mayank as founder for simulation
-  const [user, setUser] = useState<User | null>({ 
-    id: '1', 
-    name: 'Mayank', 
-    role: 'founder', 
-    email: 'mayank@clickbait.com' 
-  });
+// Hardcoded Production Credentials
+const VALID_USERS = [
+  { email: "mayank@clickbait.labs", pass: "admin2026", name: "Mayank", role: "founder" },
+  { email: "tathagat@clickbait.labs", pass: "admin2026", name: "Tathagat", role: "founder" },
+  { email: "valkyrie@talent.io", pass: "shoot2026", name: "Valkyrie (Tech)", role: "creator" },
+  { email: "kira@talent.io", pass: "shoot2026", name: "Kira (Finance)", role: "creator" }
+];
 
-  const [creators, setCreators] = useState<Creator[]>([
-    { id: 'c1', name: 'Alex Tech', email: 'alex@valkyrie.com', niche: 'tech', createdAt: '2026-04-01' }
-  ]);
+export function RoleProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [creators, setCreators] = useState<Creator[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('clickbait_user');
+    const savedCreators = localStorage.getItem('clickbait_creators');
+    
+    if (savedUser) setUser(JSON.parse(savedUser));
+    
+    if (savedCreators) {
+      setCreators(JSON.parse(savedCreators));
+    } else {
+      const initialCreators = [
+        { id: 'c1', name: 'Valkyrie', email: 'valkyrie@talent.io', niche: 'tech' as const, createdAt: '2026-04-01' },
+        { id: 'c2', name: 'Kira', email: 'kira@talent.io', niche: 'finance' as const, createdAt: '2026-04-02' }
+      ];
+      setCreators(initialCreators);
+      localStorage.setItem('clickbait_creators', JSON.stringify(initialCreators));
+    }
+    setIsLoaded(true);
+  }, []);
+
+  const login = (email: string, pass: string) => {
+    const found = VALID_USERS.find(u => u.email === email && u.pass === pass);
+    if (found) {
+      const newUser: User = {
+        id: Math.random().toString(36).substr(2, 9),
+        name: found.name,
+        email: found.email,
+        role: found.role as any
+      };
+      setUser(newUser);
+      localStorage.setItem('clickbait_user', JSON.stringify(newUser));
+      router.push('/');
+      return true;
+    }
+    return false;
+  };
+
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem('clickbait_user');
+    router.push('/login');
+  };
 
   const addCreator = (data: Omit<Creator, 'id' | 'createdAt'>) => {
     const newCreator: Creator = {
@@ -32,15 +78,23 @@ export function RoleProvider({ children }: { children: ReactNode }) {
       id: Math.random().toString(36).substr(2, 9),
       createdAt: new Date().toISOString().split('T')[0]
     };
-    setCreators(prev => [...prev, newCreator]);
+    const updated = [...creators, newCreator];
+    setCreators(updated);
+    localStorage.setItem('clickbait_creators', JSON.stringify(updated));
   };
 
   const removeCreator = (id: string) => {
-    setCreators(prev => prev.filter(c => c.id !== id));
+    const updated = creators.filter(c => c.id !== id);
+    setCreators(updated);
+    localStorage.setItem('clickbait_creators', JSON.stringify(updated));
   };
 
+  const canApprove = user?.role === 'founder';
+
+  if (!isLoaded) return null;
+
   return (
-    <RoleContext.Provider value={{ user, creators, setUser, addCreator, removeCreator }}>
+    <RoleContext.Provider value={{ user, creators, login, logout, canApprove, addCreator, removeCreator }}>
       {children}
     </RoleContext.Provider>
   );

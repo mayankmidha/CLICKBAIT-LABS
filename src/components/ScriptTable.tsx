@@ -1,64 +1,71 @@
 "use client";
 
 import { Script } from "@/lib/types";
-import { Check, X, Eye, FileText, Clock } from "lucide-react";
+import { Check, X, Eye, FileText, Clock, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useRole } from "@/lib/store/RoleContext";
+import { ObsidianCard } from "./ui/Kit";
 
 interface ScriptTableProps {
   scripts: Script[];
   onApprove?: (id: string) => void;
   onReject?: (id: string) => void;
+  onRestore?: (id: string) => void;
   onView?: (script: Script) => void;
 }
 
-export function ScriptTable({ scripts, onApprove, onReject, onView }: ScriptTableProps) {
+export function ScriptTable({ scripts, onApprove, onReject, onRestore, onView }: ScriptTableProps) {
+  const { canApprove } = useRole();
+
   if (scripts.length === 0) {
     return (
-      <div className="vercel-card p-20 flex flex-col items-center justify-center text-center">
+      <div className="vercel-card p-20 flex flex-col items-center justify-center text-center border-white/5 bg-zinc-950/20">
         <FileText size={40} className="text-zinc-800 mb-4" />
-        <h3 className="text-xl font-bold text-zinc-500">No scripts found</h3>
-        <p className="text-sm text-zinc-600 mt-1">Try adjusting your filters or checking another channel.</p>
+        <h3 className="text-xl font-bold text-zinc-500 tracking-tight">Zero scripts in this sector</h3>
+        <p className="text-xs text-zinc-600 mt-2 font-medium">The pipeline is clear. Awaiting new research data.</p>
       </div>
     );
   }
 
   return (
-    <div className="w-full space-y-4 md:space-y-0 overflow-hidden md:vercel-card">
+    <div className="w-full space-y-4 md:space-y-0 overflow-hidden md:vercel-card border-white/5">
       {/* Desktop Table View */}
       <table className="w-full text-left border-collapse hidden md:table">
         <thead>
-          <tr className="border-b border-white/10 bg-white/5">
-            <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">Script Title</th>
-            <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">The Hook</th>
-            <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500 text-center">Duration</th>
-            <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">Status</th>
-            <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-zinc-500 text-right">Actions</th>
+          <tr className="border-b border-white/5 bg-white/[0.02]">
+            <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Asset Title</th>
+            <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">The Hook</th>
+            <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 text-center">Duration</th>
+            <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Status</th>
+            <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 text-right">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-white/5">
+        <tbody className="divide-y divide-white/5 bg-zinc-950/10">
           {scripts.map((script) => (
-            <tr key={script.id} className="hover:bg-white/[0.02] transition-colors group">
+            <tr key={script.id} className="hover:bg-white/[0.03] transition-colors group">
               <td className="px-6 py-4">
                 <button 
                   onClick={() => onView?.(script)}
-                  className="flex items-center gap-3 font-medium text-zinc-200 group-hover:text-white transition-colors text-left"
+                  className="flex items-center gap-3 font-bold text-zinc-200 group-hover:text-white transition-colors text-left"
                 >
-                  <FileText size={16} className="text-zinc-500 group-hover:text-red-500" />
-                  {script.title}
+                  <div className="w-8 h-8 rounded bg-zinc-900 border border-white/5 flex items-center justify-center group-hover:border-red-600/30 transition-all shadow-inner">
+                    <FileText size={14} className="text-zinc-600 group-hover:text-red-500" />
+                  </div>
+                  <span className="truncate max-w-[200px]">{script.title}</span>
                 </button>
               </td>
-              <td className="px-6 py-4 text-sm text-zinc-500 max-w-xs truncate italic">
-                &ldquo;{script.hook}&rdquo;
+              <td className="px-6 py-4 text-xs text-zinc-500 max-w-xs truncate italic font-medium">
+                "{script.hook}"
               </td>
               <td className="px-6 py-4 text-center">
-                <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-zinc-900 text-[10px] font-mono text-zinc-400 border border-white/5">
-                  <Clock size={10} />
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-zinc-900 text-[10px] font-black text-zinc-400 border border-white/5 shadow-sm">
+                  <Clock size={10} className="text-red-600" />
                   {script.duration}
                 </div>
               </td>
               <td className="px-6 py-4">
                 <span className={cn(
-                  "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tight border shadow-sm",
+                  "px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border shadow-[0_0_15px_rgba(0,0,0,0.2)]",
                   script.status === 'approved' && "bg-green-500/10 text-green-500 border-green-500/20",
                   script.status === 'pending' && "bg-amber-500/10 text-amber-500 border-amber-500/20",
                   script.status === 'rejected' && "bg-red-500/10 text-red-500 border-red-500/20",
@@ -68,30 +75,43 @@ export function ScriptTable({ scripts, onApprove, onReject, onView }: ScriptTabl
               </td>
               <td className="px-6 py-4 text-right">
                 <div className="flex items-center justify-end gap-2">
-                  {script.status === 'pending' && (
+                  {canApprove && (
                     <>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); onApprove?.(script.id); }}
-                        className="p-2 rounded-md bg-green-500/5 hover:bg-green-500/20 text-zinc-500 hover:text-green-500 transition-all border border-white/5 hover:border-green-500/30"
-                        title="Approve Script"
-                      >
-                        <Check size={16} strokeWidth={3} />
-                      </button>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); onReject?.(script.id); }}
-                        className="p-2 rounded-md bg-red-500/5 hover:bg-red-500/20 text-zinc-500 hover:text-red-500 transition-all border border-white/5 hover:border-red-500/30"
-                        title="Reject to Bin"
-                      >
-                        <X size={16} strokeWidth={3} />
-                      </button>
+                      {script.status === 'pending' && (
+                        <>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); onApprove?.(script.id); }}
+                            className="p-2 rounded bg-green-500/5 hover:bg-green-500 text-zinc-500 hover:text-white transition-all border border-white/5 hover:border-green-500/50 shadow-sm"
+                            title="Approve Asset"
+                          >
+                            <Check size={14} strokeWidth={3} />
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); onReject?.(script.id); }}
+                            className="p-2 rounded bg-red-500/5 hover:bg-red-600 text-zinc-500 hover:text-white transition-all border border-white/5 hover:border-red-600/50 shadow-sm"
+                            title="Move to Bin"
+                          >
+                            <X size={14} strokeWidth={3} />
+                          </button>
+                        </>
+                      )}
+                      {script.status === 'rejected' && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); onRestore?.(script.id); }}
+                          className="p-2 rounded bg-blue-500/5 hover:bg-blue-600 text-zinc-500 hover:text-white transition-all border border-white/5 hover:border-blue-600/50 shadow-sm"
+                          title="Restore Asset"
+                        >
+                          <RotateCcw size={14} strokeWidth={3} />
+                        </button>
+                      )}
                     </>
                   )}
                   <button 
                     onClick={() => onView?.(script)}
-                    className="p-2 rounded-md hover:bg-white/10 text-zinc-500 hover:text-white transition-all border border-white/5 hover:border-white/10"
-                    title="View Full Script"
+                    className="p-2 rounded bg-white/5 hover:bg-white text-zinc-500 hover:text-black transition-all border border-white/5 shadow-sm"
+                    title="Neural Reader"
                   >
-                    <Eye size={16} />
+                    <Eye size={14} />
                   </button>
                 </div>
               </td>
@@ -103,14 +123,16 @@ export function ScriptTable({ scripts, onApprove, onReject, onView }: ScriptTabl
       {/* Mobile Card View */}
       <div className="grid grid-cols-1 gap-4 md:hidden">
         {scripts.map((script) => (
-          <div key={script.id} className="vercel-card p-5 space-y-4 active:scale-[0.99] transition-transform">
+          <ObsidianCard key={script.id} className="p-5 space-y-4 border-white/5 bg-zinc-950/40">
             <div className="flex justify-between items-start">
-              <div className="flex items-center gap-2">
-                <FileText size={16} className="text-red-600" />
-                <h3 className="font-bold text-zinc-100 leading-tight">{script.title}</h3>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded bg-zinc-900 border border-white/5 flex items-center justify-center">
+                  <FileText size={14} className="text-red-600" />
+                </div>
+                <h3 className="font-bold text-sm text-zinc-100 leading-tight">{script.title}</h3>
               </div>
               <span className={cn(
-                "px-2 py-0.5 rounded-full text-[8px] font-black uppercase border shrink-0",
+                "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border shrink-0 shadow-lg",
                 script.status === 'approved' && "bg-green-500/10 text-green-500 border-green-500/20",
                 script.status === 'pending' && "bg-amber-500/10 text-amber-500 border-amber-500/20",
                 script.status === 'rejected' && "bg-red-500/10 text-red-500 border-red-500/20",
@@ -119,42 +141,52 @@ export function ScriptTable({ scripts, onApprove, onReject, onView }: ScriptTabl
               </span>
             </div>
             
-            <p className="text-xs text-zinc-500 italic line-clamp-2">
-              &ldquo;{script.hook}&rdquo;
-            </p>
+            <p className="text-[11px] text-zinc-500 italic line-clamp-2 font-medium">"{script.hook}"</p>
             
             <div className="flex items-center justify-between pt-4 border-t border-white/5">
-              <div className="flex items-center gap-1 text-[10px] font-mono text-zinc-500">
-                <Clock size={10} />
+              <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-zinc-500">
+                <Clock size={10} className="text-red-600" />
                 {script.duration}
               </div>
               
               <div className="flex items-center gap-2">
                 <button 
                   onClick={() => onView?.(script)}
-                  className="h-8 px-3 rounded-md bg-zinc-900 text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white border border-white/5"
+                  className="h-8 px-4 rounded bg-zinc-900 text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white border border-white/5 shadow-inner"
                 >
-                  View
+                  Read
                 </button>
-                {script.status === 'pending' && (
+                {canApprove && (
                   <>
-                    <button 
-                      onClick={() => onReject?.(script.id)}
-                      className="h-8 w-8 flex items-center justify-center rounded-md bg-red-500/10 text-red-500 border border-red-500/20"
-                    >
-                      <X size={14} strokeWidth={3} />
-                    </button>
-                    <button 
-                      onClick={() => onApprove?.(script.id)}
-                      className="h-8 w-8 flex items-center justify-center rounded-md bg-green-500/10 text-green-500 border border-green-500/20"
-                    >
-                      <Check size={14} strokeWidth={3} />
-                    </button>
+                    {script.status === 'pending' && (
+                      <>
+                        <button 
+                          onClick={() => onReject?.(script.id)}
+                          className="h-8 w-8 flex items-center justify-center rounded bg-red-600/10 text-red-500 border border-red-600/20"
+                        >
+                          <X size={14} strokeWidth={3} />
+                        </button>
+                        <button 
+                          onClick={() => onApprove?.(script.id)}
+                          className="h-8 w-8 flex items-center justify-center rounded bg-green-500/10 text-green-500 border border-green-500/20"
+                        >
+                          <Check size={14} strokeWidth={3} />
+                        </button>
+                      </>
+                    )}
+                    {script.status === 'rejected' && (
+                      <button 
+                        onClick={() => onRestore?.(script.id)}
+                        className="h-8 w-8 flex items-center justify-center rounded bg-blue-500/10 text-blue-500 border border-blue-500/20"
+                      >
+                        <RotateCcw size={14} strokeWidth={3} />
+                      </button>
+                    )}
                   </>
                 )}
               </div>
             </div>
-          </div>
+          </ObsidianCard>
         ))}
       </div>
     </div>

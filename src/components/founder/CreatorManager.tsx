@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { useRole } from "@/lib/store/RoleContext";
+import { useState, useEffect } from "react";
+import { getCreators, addCreator, removeCreator } from "@/app/actions/users";
 import type { ScriptChannel } from "@/lib/types";
 import { ObsidianCard, VortexButton } from "../ui/Kit";
 import { UserPlus, Trash2, Mail, Briefcase, User } from "lucide-react";
 
 export function CreatorManager() {
-  const { creators, addCreator, removeCreator } = useRole();
+  const [creators, setCreators] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [form, setForm] = useState<{
     name: string;
@@ -15,11 +16,26 @@ export function CreatorManager() {
     niche: ScriptChannel;
   }>({ name: "", email: "", niche: "tech" });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    async function loadCreators() {
+      const data = await getCreators();
+      setCreators(data);
+      setIsLoading(false);
+    }
+    loadCreators();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    addCreator(form);
+    const newUser = await addCreator({ ...form, role: 'creator' });
+    setCreators([newUser, ...creators]);
     setForm({ name: "", email: "", niche: "tech" });
     setIsAdding(false);
+  };
+
+  const handleRemove = async (id: string) => {
+    await removeCreator(id);
+    setCreators(prev => prev.filter(c => c.id !== id));
   };
 
   return (
@@ -95,7 +111,7 @@ export function CreatorManager() {
                 <User size={20} />
               </div>
               <button 
-                onClick={() => removeCreator(creator.id)}
+                onClick={() => handleRemove(creator.id)}
                 className="p-2 text-zinc-600 hover:text-red-500 transition-colors"
               >
                 <Trash2 size={16} />
@@ -109,11 +125,11 @@ export function CreatorManager() {
               </div>
               <div className="flex items-center gap-2 text-xs text-zinc-500">
                 <Briefcase size={12} />
-                <span className="capitalize">{creator.niche} Expert</span>
+                <span className="capitalize">{creator.niche || 'General'} Expert</span>
               </div>
             </div>
             <div className="mt-5 pt-4 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-zinc-600">
-              <span>JOINED: {creator.createdAt}</span>
+              <span>JOINED: {new Date(creator.createdAt).toLocaleDateString()}</span>
               <span className="text-red-600 font-bold uppercase tracking-tighter">Active</span>
             </div>
           </ObsidianCard>
