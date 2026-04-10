@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,52 +7,53 @@
 :root {
   --background: #000000;
   --foreground: #ededed;
-  --primary: #ff0000;
-  --border: rgba(255, 255, 255, 0.1);
+  --primary: #dc2626;
+  --border: rgba(255, 255, 255, 0.08);
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .vercel-card {
   background: #0a0a0a;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
   transition: all 0.2s ease;
 }
 
 .vercel-card:hover {
-  border-color: var(--primary);
-  box-shadow: 0 0 20px rgba(255, 0, 0, 0.1);
-}
-
-.btn-primary {
-  background: var(--primary);
-  color: white;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-weight: 500;
-  transition: opacity 0.2s;
-}
-
-.btn-primary:hover {
-  opacity: 0.9;
-}
-
-.btn-secondary {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: #fff;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(220, 38, 38, 0.3);
+  box-shadow: 0 0 30px rgba(220, 38, 38, 0.06);
 }
