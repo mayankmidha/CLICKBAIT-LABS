@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma'
 import { ScriptStatus, ScriptChannel } from '@/lib/types'
 import { revalidatePath } from 'next/cache'
 
-export async function getScripts(channel?: ScriptChannel, status?: ScriptStatus | 'all') {
+export async function getScripts(channel?: ScriptChannel, status?: any | 'all') {
   const where: any = {}
   if (channel) where.channel = channel
   if (status && status !== 'all') where.status = status
@@ -16,7 +16,7 @@ export async function getScripts(channel?: ScriptChannel, status?: ScriptStatus 
   })
 }
 
-export async function updateScriptStatus(id: string, status: ScriptStatus) {
+export async function updateScriptStatus(id: string, status: any) {
   const script = await prisma.script.update({
     where: { id },
     data: { status },
