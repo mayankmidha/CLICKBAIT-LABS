@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { initialScripts } from "@/lib/data";
+import { useState, useMemo, useEffect } from "react";
 import { Script } from "@/lib/types";
 import { ObsidianCard, VortexButton, StatusBadge } from "@/components/ui/Kit";
 import { 
