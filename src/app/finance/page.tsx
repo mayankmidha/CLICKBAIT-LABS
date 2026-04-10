@@ -94,7 +94,7 @@ export default function FinancePage() {
         </div>
       </header>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="vercel-card p-6">
           <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-1">Queue</p>
           <p className="text-3xl font-bold">{scripts.filter(s => s.status === 'pending').length}</p>
@@ -106,10 +106,6 @@ export default function FinancePage() {
         <div className="vercel-card p-6 border-l-4 border-l-red-600/50">
           <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-1">Rejected</p>
           <p className="text-3xl font-bold text-red-500">{scripts.filter(s => s.status === 'rejected').length}</p>
-        </div>
-        <div className="vercel-card p-6 border-l-4 border-l-red-600/50">
-          <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-1">Cap at Risk</p>
-          <p className="text-3xl font-bold text-red-500">₹{scripts.length * 1.5}L</p>
         </div>
       </div>
 
