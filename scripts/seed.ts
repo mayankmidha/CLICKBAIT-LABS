@@ -2,11 +2,13 @@ import prisma from '../src/lib/prisma';
 import fs from 'fs';
 import path from 'path';
 
-const TECH_PATH = '/Users/midha/Downloads/CLICKBAIT_FACTORY/TECH';
-const FINANCE_PATH = '/Users/midha/Downloads/CLICKBAIT_FACTORY/FINANCE';
+const FACTORY_TECH_PATH = '/Users/midha/Downloads/CLICKBAIT_FACTORY/TECH';
+const FACTORY_FINANCE_PATH = '/Users/midha/Downloads/CLICKBAIT_FACTORY/FINANCE';
+const BATCH_TECH_PATH = '/Users/midha/Downloads/CLICKBAIT_TECH';
+const BATCH_FINANCE_PATH = '/Users/midha/Downloads/CLICKBAIT_FINANCE';
 
 async function parseAndSeed() {
-  console.log('--- Starting Script Ingestion ---');
+  console.log('--- Starting Comprehensive Script Ingestion & Cleaning ---');
 
   // Create default users (cofounders)
   await prisma.user.upsert({
@@ -29,101 +31,135 @@ async function parseAndSeed() {
     },
   });
 
-  await seedChannel('tech', TECH_PATH);
-  await seedChannel('finance', FINANCE_PATH);
+  // 1. Seed from Factory (Individual Files)
+  await seedFromFactory('tech', FACTORY_TECH_PATH);
+  await seedFromFactory('finance', FACTORY_FINANCE_PATH);
 
-  console.log('--- Ingestion Complete ---');
+  // 2. Seed from Batch Files (Multi-video files)
+  await seedFromBatch('tech', BATCH_TECH_PATH);
+  await seedFromBatch('finance', BATCH_FINANCE_PATH);
+
+  console.log('--- Ingestion & Cleaning Complete ---');
 }
 
-async function seedChannel(channel: 'tech' | 'finance', dirPath: string) {
+async function seedFromFactory(channel: 'tech' | 'finance', dirPath: string) {
   if (!fs.existsSync(dirPath)) {
     console.warn(`Directory not found: ${dirPath}`);
     return;
   }
 
   const files = fs.readdirSync(dirPath).filter(f => f.endsWith('.md'));
-  console.log(`Found ${files.length} files in ${channel} channel.`);
+  console.log(`Processing ${files.length} factory files in ${channel} channel.`);
 
   for (const file of files) {
     const fullPath = path.join(dirPath, file);
     const content = fs.readFileSync(fullPath, 'utf-8');
+    await upsertScript(content, channel, file);
+  }
+}
 
-    // Each file is ONE script. Extract metadata from the markdown.
-    // Format:
-    //   # CLICKBAIT TECH — SCRIPT N
-    //   ## TITLE: <title>
-    //   **Duration:** 10:00 (approx. 1600 words)
-    //   **Tone:** Investigative, Disruptive, High-Stakes.
-    //   ---
-    //   ### [0:00 - 0:45] THE EXPLOSIVE HOOK
-    //   ...
+async function seedFromBatch(channel: 'tech' | 'finance', dirPath: string) {
+  if (!fs.existsSync(dirPath)) {
+    console.warn(`Directory not found: ${dirPath}`);
+    return;
+  }
 
-    // Extract title
-    const titleMatch = content.match(/## TITLE:\s*(.+)/);
-    const title = titleMatch ? titleMatch[1].trim() : file.replace(/\.md$/, '').replace(/^\d+_/, '').replace(/_/g, ' ');
+  const files = fs.readdirSync(dirPath).filter(f => f.endsWith('.md'));
+  console.log(`Processing ${files.length} batch files in ${channel} channel.`);
 
-    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  for (const file of files) {
+    const fullPath = path.join(dirPath, file);
+    const content = fs.readFileSync(fullPath, 'utf-8');
+    
+    // Split by "## VIDEO"
+    const parts = content.split(/## VIDEO \d+:/);
+    if (parts.length <= 1) continue;
 
-    // Extract duration
-    let duration = '10:00';
-    const durationMatch = content.match(/\*\*Duration:\*\*\s*([^\n(]+)/);
-    if (durationMatch) duration = durationMatch[1].trim();
-
-    // Extract tone
-    let tone = 'High-Stakes';
-    const toneMatch = content.match(/\*\*Tone:\*\*\s*(.+)/);
-    if (toneMatch) tone = toneMatch[1].trim().replace(/\.$/, '');
-
-    // Extract hook — first HOST: line
-    let hook = '';
-    const hookMatch = content.match(/\*\*HOST:\*\*\s*"([^"]+)"/);
-    if (hookMatch) {
-      hook = hookMatch[1].substring(0, 200);
-    } else {
-      // Fallback: first non-empty line after THE HOOK section
-      const hookSection = content.match(/THE (?:EXPLOSIVE |BEAST )?HOOK\n([\s\S]*?)(?=###|---|$)/);
-      if (hookSection) {
-        const firstLine = hookSection[1].trim().split('\n').find(l => l.trim() && !l.startsWith('[') && !l.startsWith('**['));
-        if (firstLine) hook = firstLine.replace(/\*\*/g, '').replace(/^HOST:\s*/, '').replace(/"/g, '').substring(0, 200);
+    console.log(`  Found ${parts.length - 1} videos in batch file: ${file}`);
+    
+    for (let i = 1; i < parts.length; i++) {
+      const videoContent = parts[i];
+      // Reconstruct a "pseudo-file" content for parsing
+      const titleMatch = videoContent.match(/^\s*(.+)/);
+      const title = titleMatch ? titleMatch[1].trim() : `Batch Video ${i}`;
+      
+      // Check if this video has full content or just hook
+      const hasFullContent = videoContent.includes('### [');
+      
+      if (!hasFullContent) {
+        // Skip hooks for now if we want "Clean" scripts only, 
+        // OR we can create a placeholder script.
+        // Let's only ingest full scripts from batch to keep it "Clean".
+        continue;
       }
-    }
 
-    if (!hook) hook = `A deep dive into ${title}`;
-
-    try {
-      await prisma.script.upsert({
-        where: { slug },
-        update: {
-          title,
-          channel,
-          duration,
-          tone,
-          hook,
-          content,
-          status: 'pending',
-        },
-        create: {
-          title,
-          slug,
-          channel,
-          status: 'pending',
-          duration,
-          tone,
-          hook,
-          content,
-        },
-      });
-      console.log(`  ✓ ${channel}/${file} → "${title}"`);
-    } catch (err: any) {
-      // Slug collision — append file number
-      const altSlug = slug + '-' + file.match(/^(\d+)/)?.[1];
-      console.warn(`  ⚠ Slug collision for "${title}", using: ${altSlug}`);
-      await prisma.script.upsert({
-        where: { slug: altSlug },
-        update: { title, channel, duration, tone, hook, content, status: 'pending' },
-        create: { title, slug: altSlug, channel, status: 'pending', duration, tone, hook, content },
-      });
+      await upsertScript(videoContent, channel, `${file}_v${i}`, title);
     }
+  }
+}
+
+async function upsertScript(content: string, channel: 'tech' | 'finance', sourceRef: string, providedTitle?: string) {
+  // Extract metadata
+  const titleMatch = content.match(/## TITLE:\s*(.+)/) || content.match(/^\s*(.+)/);
+  const title = providedTitle || (titleMatch ? titleMatch[1].trim() : sourceRef);
+
+  // Clean title: remove markdown bolding if present
+  const cleanTitle = title.replace(/\*\*/g, '').trim();
+  const slug = cleanTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+  if (!slug) return;
+
+  // Extract duration
+  let duration = '10:00';
+  const durationMatch = content.match(/\*\*Duration:\*\*\s*([^\n(]+)/);
+  if (durationMatch) duration = durationMatch[1].trim();
+
+  // Extract tone
+  let tone = 'High-Stakes';
+  const toneMatch = content.match(/\*\*Tone:\*\*\s*(.+)/);
+  if (toneMatch) tone = toneMatch[1].trim().replace(/\.$/, '').replace(/\*\*/g, '');
+
+  // Extract hook
+  let hook = '';
+  const hookMatch = content.match(/\*\*HOST:\*\*\s*"([^"]+)"/);
+  if (hookMatch) {
+    hook = hookMatch[1].substring(0, 200);
+  } else {
+    const hookSection = content.match(/THE (?:EXPLOSIVE |BEAST )?HOOK\n([\s\S]*?)(?=###|---|$)/);
+    if (hookSection) {
+      const firstLine = hookSection[1].trim().split('\n').find(l => l.trim() && !l.startsWith('[') && !l.startsWith('**['));
+      if (firstLine) hook = firstLine.replace(/\*\*/g, '').replace(/^HOST:\s*/, '').replace(/"/g, '').substring(0, 200);
+    }
+  }
+
+  if (!hook) hook = `A deep dive into ${cleanTitle}`;
+
+  try {
+    await prisma.script.upsert({
+      where: { slug },
+      update: {
+        title: cleanTitle,
+        channel,
+        duration,
+        tone,
+        hook,
+        content,
+        // Don't overwrite status if it's already approved/rejected
+      },
+      create: {
+        title: cleanTitle,
+        slug,
+        channel,
+        status: 'pending',
+        duration,
+        tone,
+        hook,
+        content,
+      },
+    });
+    // console.log(`  ✓ ${channel} → "${cleanTitle}"`);
+  } catch (err: any) {
+    console.error(`  ✗ Error upserting "${cleanTitle}":`, err.message);
   }
 }
 
