@@ -2,10 +2,10 @@ import prisma from '../src/lib/prisma';
 import fs from 'fs';
 import path from 'path';
 
-const FACTORY_TECH_PATH = '/Users/midha/Downloads/CLICKBAIT_FACTORY/TECH';
-const FACTORY_FINANCE_PATH = '/Users/midha/Downloads/CLICKBAIT_FACTORY/FINANCE';
-const BATCH_TECH_PATH = '/Users/midha/Downloads/CLICKBAIT_TECH';
-const BATCH_FINANCE_PATH = '/Users/midha/Downloads/CLICKBAIT_FINANCE';
+const FACTORY_TECH_PATH = path.join(__dirname, 'data/tech');
+const FACTORY_FINANCE_PATH = path.join(__dirname, 'data/finance');
+const BATCH_TECH_PATH = path.join(__dirname, 'data/batch/tech');
+const BATCH_FINANCE_PATH = path.join(__dirname, 'data/batch/finance');
 
 async function parseAndSeed() {
   console.log('--- Starting Comprehensive Script Ingestion & Cleaning ---');
