@@ -2,16 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  Cpu, 
-  TrendingUp, 
-  Calendar, 
-  Trash2, 
-  Users, 
-  User, 
+import {
+  LayoutDashboard,
+  Cpu,
+  TrendingUp,
+  Video,
+  Users,
+  User,
   LogOut,
-  Zap
+  Zap,
+  CalendarDays,
+  PenLine
 } from "lucide-react";
 import { useRole } from "@/lib/store/RoleContext";
 import { cn } from "@/lib/utils";
@@ -21,20 +22,20 @@ export function Sidebar() {
   const { user, logout } = useRole();
 
   const founderItems = [
-    { name: "Command Center", icon: LayoutDashboard, href: "/" },
-    { name: "Founder Control", icon: User, href: "/founder" },
-    { name: "Tech Channel", icon: Cpu, href: "/tech" },
-    { name: "Finance Channel", icon: TrendingUp, href: "/finance" },
-    { name: "Neural Forge", icon: Zap, href: "/creator/new" },
-    { name: "Production Team", icon: Users, href: "/team" },
-    { name: "The Bin", icon: Trash2, href: "/bin" },
+    { name: "Dashboard", icon: LayoutDashboard, href: "/" },
+    { name: "Tech Scripts", icon: Cpu, href: "/tech" },
+    { name: "Finance Scripts", icon: TrendingUp, href: "/finance" },
+    { name: "Shoot Day", icon: Video, href: "/shoot" },
+    { name: "Creators", icon: Users, href: "/team" },
+    { name: "Write Script", icon: PenLine, href: "/creator/new" },
   ];
 
   const creatorItems = [
-    { name: "My Schedule", icon: Calendar, href: "/schedule" },
-    { name: "Neural Forge", icon: Zap, href: "/creator/new" },
-    { name: "Tech Pipeline", icon: Cpu, href: "/tech" },
-    { name: "Finance Pipeline", icon: TrendingUp, href: "/finance" },
+    { name: "Dashboard", icon: LayoutDashboard, href: "/" },
+    { name: "My Schedule", icon: CalendarDays, href: "/schedule" },
+    { name: "Tech Scripts", icon: Cpu, href: "/tech" },
+    { name: "Finance Scripts", icon: TrendingUp, href: "/finance" },
+    { name: "Write Script", icon: PenLine, href: "/creator/new" },
   ];
 
   const items = user?.role === "founder" ? founderItems : creatorItems;
@@ -49,7 +50,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 px-4 py-4 space-y-1">
-        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-600 mb-4 px-2">Navigation</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-600 mb-4 px-2">Menu</p>
         {items.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -58,8 +59,8 @@ export function Sidebar() {
               href={item.href}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all group",
-                isActive 
-                  ? "bg-red-600/10 text-red-500 border border-red-600/20 shadow-[0_0_20px_rgba(255,0,0,0.05)]" 
+                isActive
+                  ? "bg-red-600/10 text-red-500 border border-red-600/20 shadow-[0_0_20px_rgba(255,0,0,0.05)]"
                   : "text-zinc-500 hover:text-white hover:bg-white/5 border border-transparent"
               )}
             >
@@ -81,16 +82,16 @@ export function Sidebar() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-white truncate">{user?.name}</p>
-            <p className="text-[10px] font-black uppercase text-red-600 tracking-tight">{user?.role} Access</p>
+            <p className="text-[10px] font-bold uppercase text-red-600 tracking-tight">{user?.role}</p>
           </div>
         </div>
-        
-        <button 
+
+        <button
           onClick={logout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-zinc-500 hover:text-red-500 hover:bg-red-500/5 transition-all group border border-transparent hover:border-red-500/20"
         >
           <LogOut size={18} className="group-hover:translate-x-0.5 transition-transform" />
-          Terminate Session
+          Sign Out
         </button>
       </div>
     </div>

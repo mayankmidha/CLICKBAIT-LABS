@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  Cpu, 
-  TrendingUp, 
-  Video, 
-  Menu,
+import {
+  LayoutDashboard,
+  Cpu,
+  TrendingUp,
+  Video,
   Users
 } from "lucide-react";
 import { useRole } from "@/lib/store/RoleContext";
@@ -23,10 +22,10 @@ export function MobileNav() {
     { name: "Home", icon: LayoutDashboard, href: "/" },
     { name: "Tech", icon: Cpu, href: "/tech" },
     { name: "Finance", icon: TrendingUp, href: "/finance" },
-    { name: "Forge", icon: Menu, href: "/creator/new" },
+    { name: "Shoot", icon: Video, href: "/shoot" },
+    { name: "Creators", icon: Users, href: "/team" },
   ] : [
     { name: "Home", icon: LayoutDashboard, href: "/" },
-    { name: "Forge", icon: Menu, href: "/creator/new" },
     { name: "Tech", icon: Cpu, href: "/tech" },
     { name: "Finance", icon: TrendingUp, href: "/finance" },
   ];

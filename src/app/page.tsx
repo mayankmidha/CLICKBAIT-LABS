@@ -93,7 +93,7 @@ export default function Home() {
             className="flex items-center gap-2 px-6 shadow-red-600/20"
           >
             <Zap size={16} />
-            Neural Generate
+            Draft Script
           </VortexButton>
         </div>
       </header>
@@ -103,7 +103,7 @@ export default function Home() {
         {[
           { label: "Pipeline Depth", val: stats.total, sub: "Total Scripts", icon: Layers, color: "text-white" },
           { label: "Ready to Shoot", val: stats.approved, sub: "Approved Assets", icon: CheckCircle2, color: "text-green-500" },
-          { label: "In Review", val: stats.pending, sub: "Neural Processing", icon: Clock, color: "text-amber-500" },
+          { label: "In Review", val: stats.pending, sub: "Scripts in Review", icon: Clock, color: "text-amber-500" },
           { label: "Production Load", val: "92%", sub: "System Capacity", icon: BarChart3, color: "text-red-500" },
         ].map((stat, i) => (
           <ObsidianCard key={stat.label} className="p-6 relative group border-white/5 bg-zinc-950/30">

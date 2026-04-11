@@ -1,7 +1,7 @@
 "use client";
 
 import { Script } from "@/lib/types";
-import { Check, X, Eye, FileText, Clock, RotateCcw } from "lucide-react";
+import { Check, X, Eye, FileText, Clock, RotateCcw, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRole } from "@/lib/store/RoleContext";
 import { ObsidianCard } from "./ui/Kit";
@@ -11,10 +11,11 @@ interface ScriptTableProps {
   onApprove?: (id: string) => void;
   onReject?: (id: string) => void;
   onRestore?: (id: string) => void;
+  onAssignToShoot?: (id: string) => void;
   onView?: (script: Script) => void;
 }
 
-export function ScriptTable({ scripts, onApprove, onReject, onRestore, onView }: ScriptTableProps) {
+export function ScriptTable({ scripts, onApprove, onReject, onRestore, onAssignToShoot, onView }: ScriptTableProps) {
   const { canApprove } = useRole();
 
   if (scripts.length === 0) {
@@ -95,6 +96,15 @@ export function ScriptTable({ scripts, onApprove, onReject, onRestore, onView }:
                           </button>
                         </>
                       )}
+                      {script.status === 'approved' && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); onAssignToShoot?.(script.id); }}
+                          className="p-2 rounded bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white transition-all border border-red-600/20 hover:border-red-600/50 shadow-sm"
+                          title="Assign to Shoot Date"
+                        >
+                          <Calendar size={14} strokeWidth={2.5} />
+                        </button>
+                      )}
                       {script.status === 'rejected' && (
                         <button 
                           onClick={(e) => { e.stopPropagation(); onRestore?.(script.id); }}
@@ -109,7 +119,7 @@ export function ScriptTable({ scripts, onApprove, onReject, onRestore, onView }:
                   <button 
                     onClick={() => onView?.(script)}
                     className="p-2 rounded bg-white/5 hover:bg-white text-zinc-500 hover:text-black transition-all border border-white/5 shadow-sm"
-                    title="Neural Reader"
+                    title="Reader"
                   >
                     <Eye size={14} />
                   </button>
@@ -173,6 +183,14 @@ export function ScriptTable({ scripts, onApprove, onReject, onRestore, onView }:
                           <Check size={14} strokeWidth={3} />
                         </button>
                       </>
+                    )}
+                    {script.status === 'approved' && (
+                      <button 
+                        onClick={() => onAssignToShoot?.(script.id)}
+                        className="h-8 w-8 flex items-center justify-center rounded bg-red-600/10 text-red-500 border border-red-600/20"
+                      >
+                        <Calendar size={14} />
+                      </button>
                     )}
                     {script.status === 'rejected' && (
                       <button 
