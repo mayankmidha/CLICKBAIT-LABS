@@ -51,7 +51,7 @@ model ShootDate {
 }
 
 model Comment {
-  id        String   @id @id @default(cuid())
+  id        String   @id @default(cuid())
   content   String
   scriptId  String
   authorId  String
